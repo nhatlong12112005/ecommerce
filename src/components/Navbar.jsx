@@ -4,8 +4,11 @@ import logo from "../assets/logo.png";
 import ico_search from "../assets/ico_search.png";
 import ico_user from "../assets/ico_user.png";
 import ico_bag from "../assets/ico_bag.png";
+import { useSelector } from "react-redux";
+import ToogleAccountMenu from "./ToogleAccountMenu";
 
 export const Navbar = () => {
+  const { USER } = useSelector((state) => state.auth);
   return (
     <div className="container flex items-center">
       <h1 className="flex-shrink-0 mr-5">
@@ -78,11 +81,13 @@ export const Navbar = () => {
         <a href="" className=" lg:hidden">
           <img className="size-5" src={ico_search} alt="" />
         </a>
-        <Link to="/login">
-          {" "}
-          {/* Sửa link cho phù hợp */}
-          <img className=" size-5 " src={ico_user} alt="" />
-        </Link>
+        {USER ? (
+          <ToogleAccountMenu />
+        ) : (
+          <Link to="/login">
+            <img className=" size-5 " src={ico_user} alt="" />
+          </Link>
+        )}
         <Link to="/cart" className=" relative ">
           {" "}
           {/* Sửa link cho phù hợp */}

@@ -1,14 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axiosClient from "../../services/axiosClient";
-import { API_LOGIN } from "../../constant/api";
+import { useDispatch, useSelector } from "react-redux";
+import { doLogin } from "../../store/features/auth/authenSlice";
 
 export const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const { USER } = useSelector((state) => state.auth); // ✅ lấy user từ redux
+
   const [formLogin, setFormLogin] = useState({
-    email: "",
+    name: "",
     password: "",
   });
+
+  const users = [
+    { name: "Admin", password: "123456", role: "ADMIN" },
+    { name: "Long", password: "123456", role: "USER" },
+  ];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormLogin({
@@ -16,22 +26,28 @@ export const Login = () => {
       [name]: value,
     });
   };
-  const handleSubmit = async () => {
-    try {
-      const payload = {
-        ...formLogin,
-        role: "USER",
-      };
-      const res = await axiosClient.post(API_LOGIN, payload);
-      console.log(res);
-      if (res.status === 200) {
-        navigate("/");
-      }
-    } catch (error) {
-      alert("that bai");
-      console.log(error);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const found = users.find(
+      (u) => u.name === formLogin.name && u.password === formLogin.password
+    );
+
+    if (found) {
+      dispatch(doLogin(found)); // ✅ cập nhật redux
+    } else {
+      alert("Sai tên đăng nhập hoặc mật khẩu!");
     }
   };
+
+  // ✅ Khi USER có dữ liệu thì tự động điều hướng
+  useEffect(() => {
+    if (USER) {
+      if (USER.role === "ADMIN") navigate("/");
+      else navigate("/");
+    }
+  }, [USER, navigate]);
+
   return (
     <>
       <section>
@@ -40,14 +56,15 @@ export const Login = () => {
           <div className=" container ">
             <div className=" max-w-xl mx-auto ">
               <h2 className=" font-semibold text-2xl ">Sign in</h2>
-              <div>
+              <form onSubmit={handleSubmit}>
                 <div className="mt-5">
                   <input
                     className=" mt-2 w-full h-[50px] border border-gray p-5 rounded-lg text-[14px] "
-                    type="email"
-                    name="email"
-                    placeholder=" Email "
+                    type="text"
+                    name="name"
+                    placeholder="userName"
                     onChange={handleChange}
+                    required
                   />
                 </div>
                 <div className=" mt-3 ">
@@ -57,21 +74,24 @@ export const Login = () => {
                     name="password"
                     placeholder="Password"
                     onChange={handleChange}
+                    required
                   />
                 </div>
+
                 <Link
                   to={"/register"}
                   className="text-xs mt-5 mb-5 block hover:underline "
                 >
                   Register
                 </Link>
+
                 <button
-                  onClick={handleSubmit}
-                  className="w-full uppercase h-[50px] bg-black text-white font-semibold text-sm px-4 flex-1 rounded-lg hover:bg hover:bg-white border hover:border-black hover:text-black transition-all"
+                  type="submit"
+                  className="w-full uppercase h-[50px] bg-black text-white font-semibold text-sm px-4 flex-1 rounded-lg hover:bg-white border hover:border-black hover:text-black transition-all"
                 >
                   Login
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>

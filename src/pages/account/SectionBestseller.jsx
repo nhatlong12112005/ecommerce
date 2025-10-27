@@ -1,7 +1,44 @@
 import React from "react";
 import { BoxProduct } from "../../components/BoxProduct";
+import pro1 from "../../assets/iphone-17-pro.png";
+import pro2 from "../../assets/iphone-17-pro-black.png";
 
 export const SectionBestseller = () => {
+  const products = [
+    {
+      id: 1,
+      name: "iPhone 17 Pro",
+      price: "$999",
+      imgDefault: pro1,
+      imgHover: pro2,
+      link: "/",
+    },
+    {
+      id: 2,
+      name: "iPhone 17 Pro Max",
+      price: "$1099",
+      imgDefault: pro1,
+      imgHover: pro2,
+      link: "/",
+    },
+    {
+      id: 3,
+      name: "iPhone 17",
+      price: "$899",
+      imgDefault: pro1,
+      imgHover: pro2,
+      link: "/",
+    },
+    {
+      id: 4,
+      name: "iPhone 17 Mini",
+      price: "$799",
+      imgDefault: pro1,
+      imgHover: pro2,
+      link: "/",
+    },
+  ];
+
   return (
     <section className="mt-9 lg:mt-24 pt-16 pb-8 bg-gray">
       <div className="container">
@@ -19,8 +56,9 @@ export const SectionBestseller = () => {
             View All
           </a>
         </div>
-        <ul className=" mt-8 lg:grid grid-cols-4 gap-7 ">
-          <BoxProduct />
+
+        <ul className="mt-8 lg:grid grid-cols-4 gap-7">
+          <BoxProduct products={products} />
         </ul>
       </div>
     </section>

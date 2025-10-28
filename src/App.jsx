@@ -8,11 +8,15 @@ import LayoutAdmin from "./layouts/LayoutAdmin/LayoutAdmin";
 import { ToastContainer } from "react-toastify";
 import AdminRoute from "./routers/AdminRoutes";
 import Dashboard from "./pages/admin/Dashboard";
-import { CategoryManagement } from "./pages/admin/Category/CategoryManagement";
-import { ProductManagement } from "./pages/admin/ProductManagement/ProductManagement";
+import CategoryManagement from "./pages/admin/Category/CategoryManagement";
+import ProductManagement from "./pages/admin/ProductManagement/ProductManagement";
 import CreateProduct from "./pages/admin/ProductManagement/AddProduct";
 import OrderManagement from "./pages/admin/OrderManagement/OrderMangement";
 import DetailOrder from "./pages/admin/OrderManagement/DetailOrder";
+import CustomerManagement from "./pages/admin/CustomerMangement/CustomerMangement";
+import SupplierManagement from "./pages/admin/SupplierManagement/SupplierManagement";
+import FeedbackManagement from "./pages/admin/Feedback/FeedbackManagement";
+import InvoiceManagement from "./pages/admin/InvoiceManagement/InvoiceManagement";
 
 function App() {
   return (
@@ -57,36 +61,20 @@ function App() {
 
             {/* Product */}
             <Route path="product" element={<ProductManagement />} />
-            <Route path="product/add" element={<CreateProduct />} />
-            <Route path="product/edit/:id" element={<CreateProduct />} />
+            {/* <Route path="product/add" element={<CreateProduct />} />
+            <Route path="product/edit/:id" element={<CreateProduct />} /> */}
 
             {/* Order */}
             <Route path="order" element={<OrderManagement />} />
             <Route path="/admin/order/:id" element={<DetailOrder />} />
 
             {/* Customer */}
-            <Route
-              path="customer"
-              element={<div>Trang Quản Lý Khách Hàng</div>}
-            />
+            <Route path="customer" element={<CustomerManagement />} />
 
-            {/* Payment */}
-            <Route
-              path="payment"
-              element={<div>Trang Quản Lý Thanh Toán</div>}
-            />
+            <Route path="supplier" element={<SupplierManagement />} />
 
-            {/* Shipping */}
-            <Route
-              path="shipping"
-              element={<div>Trang Quản Lý Giao Hàng</div>}
-            />
-
-            {/* Settings */}
-            <Route
-              path="settings"
-              element={<div>Trang Cài Đặt Hệ Thống</div>}
-            />
+            <Route path="feedback" element={<FeedbackManagement />} />
+            <Route path="invoice" element={<InvoiceManagement />} />
           </Route>
         </Route>
       </Routes>

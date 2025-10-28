@@ -26,6 +26,9 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PaymentIcon from "@mui/icons-material/Payment";
 import SettingsIcon from "@mui/icons-material/Settings";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import FeedbackIcon from "@mui/icons-material/Feedback";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import HomeIcon from "@mui/icons-material/Home";
 import { Outlet, Link, useLocation } from "react-router-dom";
 
 const drawerWidth = 260;
@@ -124,12 +127,22 @@ export default function LayoutAdmin() {
       icon: <PeopleIcon />,
       path: "/admin/customer",
     },
-
     {
-      text: "System Settings",
-      icon: <SettingsIcon />,
-      path: "/admin/settings",
+      text: "Supplier Management",
+      icon: <LocalShippingIcon />,
+      path: "/admin/supplier",
     },
+    {
+      text: "Feedback Management",
+      icon: <FeedbackIcon />,
+      path: "/admin/feedback",
+    },
+    {
+      text: "Quản lý Hóa đơn",
+      icon: <ReceiptIcon />,
+      path: "/admin/invoice",
+    },
+    { text: "Trang chủ", icon: <HomeIcon />, path: "/" },
   ];
 
   return (

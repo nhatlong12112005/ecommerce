@@ -14,20 +14,24 @@ import {
   Paper,
   MenuItem,
   Chip,
+  Box,
+  Grid,
 } from "@mui/material";
 import dayjs from "dayjs";
-import OrderDetailsDialog from "./DetailOrder";
+import InvoiceDetailsDialog from "./InvoiceDetailsDialog"; // Import dialog chi tiết
 
 const LIMIT_RECORD_PER_PAGE = 10;
 
-const mockOrders = [
+// Dữ liệu hóa đơn
+const mockInvoices = [
   {
-    _id: "DH001",
+    _id: "HD001",
+    orderId: "DH001",
     customerName: "Nguyễn Văn An",
     shippingPhone: "0908123456",
     totalAmount: 33990000,
-    status: "Chờ xác nhận",
-    createdAt: "2025-10-28T10:00:00Z",
+    status: "Đã thanh toán",
+    createdAt: "2025-10-28T10:05:00Z",
     shippingAddress: "123 Đường ABC, Phường X, Quận Y, TP.HCM",
     items: [
       {
@@ -39,12 +43,13 @@ const mockOrders = [
     ],
   },
   {
-    _id: "DH002",
+    _id: "HD002",
+    orderId: "DH002",
     customerName: "Trần Thị Bích",
     shippingPhone: "0912789101",
     totalAmount: 59480000,
-    status: "Đang giao",
-    createdAt: "2025-10-27T14:30:00Z",
+    status: "Chưa thanh toán",
+    createdAt: "2025-10-27T14:35:00Z",
     shippingAddress: "456 Đường DEF, Phường A, Quận B, Hà Nội",
     items: [
       {
@@ -55,15 +60,15 @@ const mockOrders = [
       },
       { productId: "p4", name: "AirPods Pro 3", quantity: 1, price: 6490000 },
     ],
-    shipper: "Giao Hàng Nhanh",
   },
   {
-    _id: "DH003",
+    _id: "HD003",
+    orderId: "DH003",
     customerName: "Lê Văn Cường",
     shippingPhone: "0987654321",
     totalAmount: 31990000,
-    status: "Hoàn thành",
-    createdAt: "2025-10-26T09:15:00Z",
+    status: "Đã thanh toán",
+    createdAt: "2025-10-26T09:20:00Z",
     shippingAddress: "789 Đường GHI, Phường C, Quận D, Đà Nẵng",
     items: [
       {
@@ -73,72 +78,51 @@ const mockOrders = [
         price: 31990000,
       },
     ],
-    shipper: "Viettel Post",
-  },
-  {
-    _id: "DH004",
-    customerName: "Phạm Thị Dung",
-    shippingPhone: "0939888999", // Thêm SĐT
-    totalAmount: 6490000,
-    status: "Đã hủy",
-    createdAt: "2025-10-25T11:00:00Z",
-    shippingAddress: "101 Đường KLM, Phường E, Quận F, Cần Thơ",
-    items: [
-      { productId: "p4", name: "AirPods Pro 3", quantity: 1, price: 6490000 },
-    ],
   },
 ];
 
 const getStatusChipColor = (status) => {
-  switch (status) {
-    case "Hoàn thành":
-      return "success";
-    case "Đang giao":
-      return "info";
-    case "Đã xác nhận":
-      return "primary";
-    case "Chờ xác nhận":
-      return "warning";
-    case "Đã hủy":
-      return "error";
-    default:
-      return "default";
-  }
+  return status === "Đã thanh toán" ? "success" : "warning";
 };
 
-export default function OrderManagement() {
-  const [orders, setOrders] = useState(mockOrders);
-  const [filters, setFilters] = useState({ search: "", status: "" });
+export default function InvoiceManagement() {
+  const [invoices, setInvoices] = useState(mockInvoices);
+  const [filters, setFilters] = useState({ search: "", status: "", date: "" });
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
-  const filteredOrders = orders.filter((order) => {
+  // Lọc hóa đơn
+  const filteredInvoices = invoices.filter((invoice) => {
     const searchTerm = filters.search.toLowerCase();
     const matchSearch =
-      order._id.toLowerCase().includes(searchTerm) ||
-      order.customerName.toLowerCase().includes(searchTerm) ||
-      order.shippingPhone.includes(searchTerm);
-    const matchStatus = filters.status ? order.status === filters.status : true;
-    return matchSearch && matchStatus;
+      invoice._id.toLowerCase().includes(searchTerm) ||
+      invoice.customerName.toLowerCase().includes(searchTerm);
+    const matchStatus = filters.status
+      ? invoice.status === filters.status
+      : true;
+    const matchDate = filters.date
+      ? dayjs(invoice.createdAt).isSame(filters.date, "day")
+      : true;
+    return matchSearch && matchStatus && matchDate;
   });
 
   const handleChangePage = (event, value) => setPage(value);
 
-  const handleOpenDialog = (order) => {
-    setSelectedOrder(order);
+  const handleOpenDialog = (invoice) => {
+    setSelectedInvoice(invoice);
     setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setSelectedOrder(null);
+    setSelectedInvoice(null);
   };
 
-  const handleUpdateOrder = (updatedOrder) => {
-    setOrders(
-      orders.map((order) =>
-        order._id === updatedOrder._id ? updatedOrder : order
+  const handleUpdate = (updatedInvoice) => {
+    setInvoices(
+      invoices.map((inv) =>
+        inv._id === updatedInvoice._id ? updatedInvoice : inv
       )
     );
   };
@@ -146,17 +130,17 @@ export default function OrderManagement() {
   return (
     <div>
       <Typography variant="h6" gutterBottom>
-        Quản lý đơn hàng
+        Quản lý hóa đơn
       </Typography>
 
       <div className="flex flex-wrap justify-between gap-3 pb-4 items-center">
         <div className="flex flex-wrap gap-3 items-center">
           <TextField
-            label="Tìm theo mã ĐH, tên KH, SĐT" // Cập nhật label
+            label="Tìm theo mã HĐ, tên KH"
             size="small"
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            style={{ minWidth: 250 }}
+            style={{ minWidth: 200 }}
           />
           <TextField
             label="Trạng thái"
@@ -167,12 +151,17 @@ export default function OrderManagement() {
             style={{ minWidth: 180 }}
           >
             <MenuItem value="">Tất cả</MenuItem>
-            <MenuItem value="Chờ xác nhận">Chờ xác nhận</MenuItem>
-            <MenuItem value="Đã xác nhận">Đã xác nhận</MenuItem>
-            <MenuItem value="Đang giao">Đang giao</MenuItem>
-            <MenuItem value="Hoàn thành">Hoàn thành</MenuItem>
-            <MenuItem value="Đã hủy">Đã hủy</MenuItem>
+            <MenuItem value="Đã thanh toán">Đã thanh toán</MenuItem>
+            <MenuItem value="Chưa thanh toán">Chưa thanh toán</MenuItem>
           </TextField>
+          <TextField
+            label="Ngày tạo"
+            type="date"
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            value={filters.date}
+            onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+          />
         </div>
       </div>
 
@@ -182,9 +171,8 @@ export default function OrderManagement() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Mã đơn hàng</TableCell>
+              <TableCell>Mã hóa đơn</TableCell>
               <TableCell>Tên khách hàng</TableCell>
-              <TableCell>Số điện thoại</TableCell> {/* Thêm cột SĐT */}
               <TableCell>Tổng tiền</TableCell>
               <TableCell>Trạng thái</TableCell>
               <TableCell>Ngày tạo</TableCell>
@@ -192,34 +180,32 @@ export default function OrderManagement() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => (
-                <TableRow key={order._id}>
-                  <TableCell>{order._id}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell>{order.shippingPhone}</TableCell>{" "}
-                  {/* Hiển thị SĐT */}
+            {filteredInvoices.length > 0 ? (
+              filteredInvoices.map((invoice) => (
+                <TableRow key={invoice._id}>
+                  <TableCell>{invoice._id}</TableCell>
+                  <TableCell>{invoice.customerName}</TableCell>
                   <TableCell>
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
                       currency: "VND",
-                    }).format(order.totalAmount)}
+                    }).format(invoice.totalAmount)}
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={order.status}
-                      color={getStatusChipColor(order.status)}
+                      label={invoice.status}
+                      color={getStatusChipColor(invoice.status)}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
-                    {dayjs(order.createdAt).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(invoice.createdAt).format("DD/MM/YYYY")}
                   </TableCell>
                   <TableCell align="center">
                     <Button
                       size="small"
                       variant="outlined"
-                      onClick={() => handleOpenDialog(order)}
+                      onClick={() => handleOpenDialog(invoice)}
                     >
                       Xem chi tiết
                     </Button>
@@ -228,10 +214,8 @@ export default function OrderManagement() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} align="center">
-                  {" "}
-                  {/* Cập nhật colspan */}
-                  Không tìm thấy đơn hàng nào
+                <TableCell colSpan={6} align="center">
+                  Không tìm thấy hóa đơn
                 </TableCell>
               </TableRow>
             )}
@@ -239,24 +223,24 @@ export default function OrderManagement() {
         </Table>
       </TableContainer>
 
-      {filteredOrders.length > 0 && (
+      {filteredInvoices.length > 0 && (
         <div className="flex justify-between items-center px-3 py-5">
           <div className="text-sm">
-            Hiển thị {filteredOrders.length} đơn hàng
+            Hiển thị {filteredInvoices.length} hóa đơn
           </div>
           <Pagination
             page={page}
-            count={Math.ceil(filteredOrders.length / LIMIT_RECORD_PER_PAGE)}
+            count={Math.ceil(filteredInvoices.length / LIMIT_RECORD_PER_PAGE)}
             onChange={handleChangePage}
           />
         </div>
       )}
 
-      <OrderDetailsDialog
+      <InvoiceDetailsDialog
         open={isDialogOpen}
         onClose={handleCloseDialog}
-        onUpdate={handleUpdateOrder}
-        order={selectedOrder}
+        onUpdate={handleUpdate}
+        invoice={selectedInvoice}
       />
     </div>
   );

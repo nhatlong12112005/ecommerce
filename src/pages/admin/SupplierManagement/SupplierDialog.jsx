@@ -13,21 +13,23 @@ import CloseIcon from "@mui/icons-material/Close";
 // State ban đầu cho form
 const initialState = {
   name: "",
-  description: "",
+  email: "",
+  phone: "",
+  address: "",
 };
 
-export default function CategoryDialog({ open, onClose, onSave, category }) {
+export default function SupplierDialog({ open, onClose, onSave, supplier }) {
   const [formData, setFormData] = useState(initialState);
-  const isEditing = !!category; // Xác định là đang sửa hay thêm mới
+  const isEditing = !!supplier; // Xác định là đang sửa hay thêm mới
 
   // useEffect để điền dữ liệu vào form khi sửa
   useEffect(() => {
-    if (category) {
-      setFormData(category);
+    if (supplier) {
+      setFormData(supplier);
     } else {
       setFormData(initialState);
     }
-  }, [category, open]);
+  }, [supplier, open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -42,7 +44,7 @@ export default function CategoryDialog({ open, onClose, onSave, category }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {isEditing ? "Chỉnh sửa danh mục" : "Thêm danh mục mới"}
+        {isEditing ? "Chỉnh sửa nhà cung cấp" : "Thêm nhà cung cấp mới"}
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -54,7 +56,7 @@ export default function CategoryDialog({ open, onClose, onSave, category }) {
       <DialogContent dividers>
         <div className="flex flex-col gap-4 pt-2">
           <TextField
-            label="Tên danh mục"
+            label="Tên nhà cung cấp"
             name="name"
             value={formData.name}
             onChange={handleChange}
@@ -62,13 +64,28 @@ export default function CategoryDialog({ open, onClose, onSave, category }) {
             required
           />
           <TextField
-            label="Mô tả"
-            name="description"
-            value={formData.description}
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Số điện thoại"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Địa chỉ"
+            name="address"
+            value={formData.address}
             onChange={handleChange}
             fullWidth
             multiline
-            rows={3}
+            rows={2}
           />
         </div>
       </DialogContent>

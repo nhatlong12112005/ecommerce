@@ -1,122 +1,170 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  TextField,
+  IconButton,
+  MenuItem,
   Typography,
-  Paper,
   Divider,
+  Grid,
 } from "@mui/material";
-import dayjs from "dayjs";
+import CloseIcon from "@mui/icons-material/Close";
 
-// Mock dữ liệu đơn hàng (có thêm địa chỉ)
-const mockOrders = [
-  {
-    _id: "o1",
-    customer: "Nguyễn Văn A",
-    address: "123 Đường Lý Thường Kiệt, Quận 10, TP.HCM",
-    total: 45990000,
-    status: "Đang xử lý",
-    createdAt: "2025-10-25T10:00:00Z",
-    items: [
-      { name: "iPhone 15 Pro Max", quantity: 1, price: 33990000 },
-      { name: "AirPods Pro 2", quantity: 2, price: 6000000 },
-    ],
-  },
-  {
-    _id: "o2",
-    customer: "Trần Thị B",
-    address: "456 Đường Nguyễn Trãi, Quận 5, TP.HCM",
-    total: 29990000,
-    status: "Đã giao",
-    createdAt: "2025-10-24T12:30:00Z",
-    items: [{ name: "Samsung Galaxy S24 Ultra", quantity: 1, price: 29990000 }],
-  },
-  {
-    _id: "o3",
-    customer: "Lê Văn C",
-    address: "789 Đường Hai Bà Trưng, Quận 1, TP.HCM",
-    total: 28990000,
-    status: "Đang xử lý",
-    createdAt: "2025-10-20T09:00:00Z",
-    items: [{ name: "MacBook Air M3", quantity: 1, price: 28990000 }],
-  },
-];
-
-export default function DetailOrder() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [order, setOrder] = useState(null);
+export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
+  const [currentOrder, setCurrentOrder] = useState(null);
 
   useEffect(() => {
-    const found = mockOrders.find((o) => o._id === id);
-    if (found) setOrder(found);
-  }, [id]);
+    if (order) {
+      setCurrentOrder({ ...order });
+    }
+  }, [order, open]);
 
-  if (!order) return <div>Không tìm thấy đơn hàng</div>;
+  const handleFieldChange = (field, value) => {
+    setCurrentOrder((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = () => {
+    onUpdate(currentOrder);
+    onClose();
+  };
+
+  const handleCancelOrder = () => {
+    if (
+      window.confirm(
+        "Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác."
+      )
+    ) {
+      onUpdate({ ...currentOrder, status: "Đã hủy" });
+      onClose();
+    }
+  };
+
+  if (!currentOrder) return null;
 
   return (
-    <div>
-      <Typography variant="h6" gutterBottom>
-        Chi tiết đơn hàng: {order.customer}
-      </Typography>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        Chi tiết đơn hàng #{currentOrder._id}
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ position: "absolute", right: 8, top: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Grid container spacing={2}>
+          {/* Thông tin khách hàng */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6" gutterBottom>
+              Thông tin khách hàng
+            </Typography>
+            <Typography>
+              <b>Tên:</b> {currentOrder.customerName}
+            </Typography>
+            <Typography>
+              <b>SĐT:</b> {currentOrder.shippingPhone}
+            </Typography>{" "}
+            {/* Hiển thị SĐT */}
+            <Typography>
+              <b>Địa chỉ giao hàng:</b> {currentOrder.shippingAddress}
+            </Typography>
+          </Grid>
 
-      <Divider sx={{ my: 2 }} />
+          {/* Cập nhật trạng thái & giao hàng */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6" gutterBottom>
+              Cập nhật & Giao hàng
+            </Typography>
+            <div className="flex flex-col gap-4">
+              <TextField
+                label="Trạng thái đơn hàng"
+                select
+                value={currentOrder.status}
+                onChange={(e) => handleFieldChange("status", e.target.value)}
+                disabled={
+                  currentOrder.status === "Đã hủy" ||
+                  currentOrder.status === "Hoàn thành"
+                }
+              >
+                <MenuItem value="Chờ xác nhận">Chờ xác nhận</MenuItem>
+                <MenuItem value="Đã xác nhận">Đã xác nhận</MenuItem>
+                <MenuItem value="Đang giao">Đang giao</MenuItem>
+                <MenuItem value="Hoàn thành">Hoàn thành</MenuItem>
+              </TextField>
+              <TextField
+                label="Phân công giao hàng"
+                value={currentOrder.shipper || ""}
+                onChange={(e) => handleFieldChange("shipper", e.target.value)}
+                placeholder="VD: Giao Hàng Nhanh, Viettel Post,..."
+              />
+            </div>
+          </Grid>
 
-      <Typography variant="body1">
-        <strong>Trạng thái:</strong> {order.status}
-      </Typography>
-      <Typography variant="body1">
-        <strong>Ngày đặt:</strong>{" "}
-        {dayjs(order.createdAt).format("YYYY-MM-DD HH:mm")}
-      </Typography>
-      <Typography variant="body1">
-        <strong>Địa chỉ giao hàng:</strong> {order.address}
-      </Typography>
-      <Typography variant="body1">
-        <strong>Tổng tiền:</strong> {order.total.toLocaleString()}₫
-      </Typography>
+          <Grid item xs={12}>
+            <Divider />
+          </Grid>
 
-      <Divider sx={{ my: 2 }} />
-
-      <Typography variant="subtitle1">Sản phẩm trong đơn:</Typography>
-      <TableContainer component={Paper} sx={{ mt: 1 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Sản phẩm</TableCell>
-              <TableCell>Số lượng</TableCell>
-              <TableCell>Giá</TableCell>
-              <TableCell>Thành tiền</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {order.items.map((item, idx) => (
-              <TableRow key={idx}>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.price.toLocaleString()}₫</TableCell>
-                <TableCell>
-                  {(item.price * item.quantity).toLocaleString()}₫
-                </TableCell>
-              </TableRow>
+          {/* Danh sách sản phẩm */}
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Sản phẩm trong đơn hàng
+            </Typography>
+            {currentOrder.items.map((item, index) => (
+              <div
+                key={index}
+                className="flex justify-between items-center mb-2"
+              >
+                <Typography>
+                  {item.quantity} x {item.name}
+                </Typography>
+                <Typography>
+                  {new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(item.price * item.quantity)}
+                </Typography>
+              </div>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Button
-        sx={{ mt: 3 }}
-        variant="contained"
-        onClick={() => navigate("/admin/order")}
+            <Divider />
+            <div className="flex justify-between items-center mt-2">
+              <Typography variant="h6">Tổng cộng</Typography>
+              <Typography variant="h6" color="primary">
+                {new Intl.NumberFormat("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                }).format(currentOrder.totalAmount)}
+              </Typography>
+            </div>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions
+        sx={{ justifyContent: "space-between", padding: "16px 24px" }}
       >
-        Quay lại
-      </Button>
-    </div>
+        <Button
+          onClick={handleCancelOrder}
+          variant="outlined"
+          color="error"
+          disabled={
+            currentOrder.status === "Đã hủy" ||
+            currentOrder.status === "Hoàn thành"
+          }
+        >
+          Hủy đơn hàng
+        </Button>
+        <div>
+          <Button onClick={onClose}>Đóng</Button>
+          <Button onClick={handleSaveChanges} variant="contained">
+            Lưu thay đổi
+          </Button>
+        </div>
+      </DialogActions>
+    </Dialog>
   );
 }

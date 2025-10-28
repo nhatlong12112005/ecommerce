@@ -10,134 +10,145 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Typography,
+  Paper,
   MenuItem,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import { formatBigNumber } from "../../../libs/utils/format-big-number";
-
-import anh from "../../../assets/iphone-17-pro-black.png";
+import ProductDialog from "./DialogRemoveProduct"; // Import dialog sản phẩm
 
 const LIMIT_RECORD_PER_PAGE = 10;
 
-export const ProductManagement = () => {
-  const navigate = useNavigate();
-
-  // ✅ Mock dữ liệu sản phẩm
-  const mockData = {
-    data: [
-      {
-        _id: "1",
-        name: "iPhone 15 Pro Max",
-        category: "Điện thoại",
-        images: [anh],
-        price: 33990000,
-        quantity: 12,
-        description:
-          "Điện thoại cao cấp nhất của Apple, chip A17 Pro, khung titan.",
-        createdAt: "2025-10-25T10:00:00Z",
-      },
-      {
-        _id: "2",
-        name: "Samsung Galaxy S24 Ultra",
-        category: "Điện thoại",
-        images: [
-          "https://cdn.tgdd.vn/Products/Images/42/301641/samsung-galaxy-s24-ultra-titanium-black-thumbnew-600x600.jpg",
-        ],
-        price: 29990000,
-        quantity: 8,
-        description:
-          "Flagship mạnh mẽ của Samsung, bút S-Pen, camera zoom 10x.",
-        createdAt: "2025-10-24T12:30:00Z",
-      },
-      {
-        _id: "3",
-        name: "MacBook Air M3 2024",
-        category: "Laptop",
-        images: [
-          "https://cdn.tgdd.vn/Products/Images/44/324102/macbook-air-m3-2024-13-inch-starlight-thumb-600x600.jpg",
-        ],
-        price: 28990000,
-        quantity: 7,
-        description: "Laptop Apple M3 hiệu năng mạnh, thiết kế mỏng nhẹ.",
-        createdAt: "2025-10-15T09:00:00Z",
-      },
-      {
-        _id: "4",
-        name: "iPad Pro M2 12.9 inch",
-        category: "Máy tính bảng",
-        images: [
-          "https://cdn.tgdd.vn/Products/Images/522/264063/ipad-pro-m2-129-silver-thumb-600x600.jpg",
-        ],
-        price: 34990000,
-        quantity: 5,
-        description: "Máy tính bảng chuyên nghiệp, màn hình Liquid Retina XDR.",
-        createdAt: "2025-10-10T14:15:00Z",
-      },
-      {
-        _id: "5",
-        name: "AirPods Pro 2 USB-C",
-        category: "Phụ kiện",
-        images: [
-          "https://cdn.tgdd.vn/Products/Images/54/306208/tai-nghe-airpods-pro-2-type-c-thumb-600x600.jpg",
-        ],
-        price: 5990000,
-        quantity: 25,
-        description: "Tai nghe chống ồn chủ động, sạc USB-C, chip H2.",
-        createdAt: "2025-09-30T16:45:00Z",
-      },
+// ✅ Mock dữ liệu sản phẩm (thêm trường 'images')
+const mockProducts = [
+  {
+    _id: "p1",
+    name: "iPhone 17 Pro Max",
+    price: 33990000,
+    quantity: 120,
+    category: "Điện thoại",
+    description: "Chip A19 Pro, Khung Titanium, Camera 48MP.",
+    createdAt: "2025-10-25T10:00:00Z",
+    images: [
+      "https://cdn.tgdd.vn/Products/Images/42/303869/iphone-15-pro-max-xanh-thumb-1-600x600.jpg",
     ],
-    page: 1,
-    total: 5,
-  };
+  },
+  {
+    _id: "p2",
+    name: "Samsung Galaxy S26 Ultra",
+    price: 31990000,
+    quantity: 85,
+    category: "Điện thoại",
+    description: "Bút S-Pen tích hợp, Màn hình Dynamic AMOLED 2X.",
+    createdAt: "2025-10-25T14:30:00Z",
+    images: [
+      "https://cdn.tgdd.vn/Products/Images/42/303792/samsung-galaxy-s24-ultra-den-thumb-600x600.jpg",
+    ],
+  },
+  {
+    _id: "p3",
+    name: "MacBook Pro M5 14-inch",
+    price: 52990000,
+    quantity: 50,
+    category: "Laptop",
+    description: "Hiệu năng đỉnh cao cho người dùng chuyên nghiệp.",
+    createdAt: "2025-09-15T09:00:00Z",
+    images: [
+      "https://cdn.tgdd.vn/Products/Images/44/324104/macbook-air-m3-2024-15-inch-midnight-thumb-600x600.jpg",
+    ],
+  },
+  {
+    _id: "p4",
+    name: "AirPods Pro 3",
+    price: 6490000,
+    quantity: 300,
+    category: "Phụ kiện",
+    description: "Chống ồn chủ động thế hệ mới, Âm thanh không gian.",
+    createdAt: "2025-09-30T16:45:00Z",
+    images: [
+      "https://cdn.tgdd.vn/Products/Images/54/306208/tai-nghe-airpods-pro-2-type-c-thumb-600x600.jpg",
+    ],
+  },
+];
 
-  const [data, setData] = useState(mockData);
-  const [filters, setFilters] = useState({ name: "", category: "", date: "" });
+export default function ProductManagement() {
+  const [products, setProducts] = useState(mockProducts);
+  const [filters, setFilters] = useState({
+    search: "",
+    category: "",
+    date: "",
+  });
+  const [page, setPage] = useState(1);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  // ✅ Lọc dữ liệu theo bộ lọc
-  const filteredProducts = data.data.filter((item) => {
-    const matchName = item.name
+  const filteredProducts = products.filter((product) => {
+    const matchSearch = product.name
       .toLowerCase()
-      .includes(filters.name.toLowerCase());
+      .includes(filters.search.toLowerCase());
     const matchCategory = filters.category
-      ? item.category === filters.category
+      ? product.category === filters.category
       : true;
     const matchDate = filters.date
-      ? dayjs(item.createdAt).isSame(filters.date, "day")
+      ? dayjs(product.createdAt).isSame(filters.date, "day")
       : true;
-    return matchName && matchCategory && matchDate;
+    return matchSearch && matchCategory && matchDate;
   });
 
-  const [page, setPage] = useState(1);
   const handleChangePage = (event, value) => setPage(value);
 
-  const handleAddProduct = () => {
-    navigate("add");
+  const handleOpenDialog = (product = null) => {
+    setEditingProduct(product);
+    setIsDialogOpen(true);
   };
 
-  // ✅ Hàm xóa sản phẩm (chỉ thao tác trên mock data)
-  const handleDelete = (id) => {
-    const filtered = data.data.filter((item) => item._id !== id);
-    setData({ ...data, data: filtered });
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingProduct(null);
+  };
+
+  const handleDelete = (productId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) {
+      setProducts(products.filter((p) => p._id !== productId));
+    }
+  };
+
+  const handleSave = (productData) => {
+    if (productData._id) {
+      // Sửa
+      setProducts(
+        products.map((p) => (p._id === productData._id ? productData : p))
+      );
+    } else {
+      // Thêm mới
+      const newProduct = {
+        ...productData,
+        _id: `p${new Date().getTime()}`,
+        createdAt: new Date().toISOString(),
+      };
+      setProducts([newProduct, ...products]);
+    }
   };
 
   return (
     <div>
-      {/* ✅ Thanh lọc nằm ngay cạnh "Thêm sản phẩm" */}
+      <Typography variant="h6" gutterBottom>
+        Quản lý sản phẩm
+      </Typography>
+
       <div className="flex flex-wrap justify-between gap-3 pb-4 items-center">
-        <div className="flex gap-3 flex-wrap items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           <TextField
-            label="Tìm theo tên"
-            variant="outlined"
+            label="Tìm theo tên sản phẩm"
             size="small"
-            value={filters.name}
-            onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            style={{ minWidth: 200 }}
           />
           <TextField
             label="Danh mục"
-            select
-            variant="outlined"
             size="small"
+            select
             value={filters.category}
             onChange={(e) =>
               setFilters({ ...filters, category: e.target.value })
@@ -147,8 +158,8 @@ export const ProductManagement = () => {
             <MenuItem value="">Tất cả</MenuItem>
             <MenuItem value="Điện thoại">Điện thoại</MenuItem>
             <MenuItem value="Laptop">Laptop</MenuItem>
-            <MenuItem value="Máy tính bảng">Máy tính bảng</MenuItem>
             <MenuItem value="Phụ kiện">Phụ kiện</MenuItem>
+            <MenuItem value="Máy tính bảng">Máy tính bảng</MenuItem>
           </TextField>
           <TextField
             label="Ngày tạo"
@@ -159,65 +170,70 @@ export const ProductManagement = () => {
             onChange={(e) => setFilters({ ...filters, date: e.target.value })}
           />
         </div>
-        <Button variant="contained" onClick={handleAddProduct}>
+        <Button variant="contained" onClick={() => handleOpenDialog()}>
           Thêm sản phẩm
         </Button>
       </div>
 
       <Divider />
 
-      <TableContainer>
+      <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell className="font-semibold">Tên sản phẩm</TableCell>
-              <TableCell className="font-semibold">Hình ảnh</TableCell>
-              <TableCell className="font-semibold">Giá</TableCell>
-              <TableCell className="font-semibold">Số lượng</TableCell>
-              <TableCell className="font-semibold">Danh mục</TableCell>
-              <TableCell className="font-semibold">Mô tả</TableCell>
-              <TableCell className="font-semibold">Thời gian tạo</TableCell>
-              <TableCell className="font-semibold">Hành động</TableCell>
+              <TableCell>Tên sản phẩm</TableCell>
+              <TableCell>Hình ảnh</TableCell> {/* ✅ Thêm cột hình ảnh */}
+              <TableCell>Giá</TableCell>
+              <TableCell>Số lượng</TableCell>
+              <TableCell>Danh mục</TableCell>
+              <TableCell>Ngày tạo</TableCell>
+              <TableCell align="center">Hành động</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredProducts.length > 0 ? (
-              filteredProducts.map((item) => (
-                <TableRow key={item._id}>
-                  <TableCell>{item.name}</TableCell>
+              filteredProducts.map((product) => (
+                <TableRow key={product._id}>
+                  <TableCell>{product.name}</TableCell>
                   <TableCell>
-                    <img
-                      src={item.images[0]}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      style={{ objectFit: "cover", borderRadius: "8px" }}
-                    />
-                  </TableCell>
-                  <TableCell>{formatBigNumber(item.price, true)}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell>
-                    <div className="truncate w-56">{item.description}</div>
-                  </TableCell>
-                  <TableCell>
-                    {dayjs(item.createdAt).format("YYYY-MM-DD HH:mm")}
+                    {product.images && product.images.length > 0 && (
+                      <img
+                        src={product.images[0]} // Hiển thị ảnh đầu tiên
+                        alt={product.name}
+                        style={{
+                          width: 50,
+                          height: 50,
+                          objectFit: "cover",
+                          borderRadius: 4,
+                        }}
+                      />
+                    )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(product.price)}
+                  </TableCell>
+                  <TableCell>{product.quantity}</TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell>
+                    {dayjs(product.createdAt).format("DD/MM/YYYY")}
+                  </TableCell>
+                  <TableCell align="center">
+                    <div className="flex gap-2 justify-center">
                       <Button
-                        variant="outlined"
                         size="small"
-                        color="primary"
-                        onClick={() => navigate(`edit/${item._id}`)}
+                        variant="outlined"
+                        onClick={() => handleOpenDialog(product)}
                       >
                         Sửa
                       </Button>
                       <Button
-                        variant="outlined"
                         size="small"
+                        variant="outlined"
                         color="error"
-                        onClick={() => handleDelete(item._id)}
+                        onClick={() => handleDelete(product._id)}
                       >
                         Xóa
                       </Button>
@@ -227,8 +243,10 @@ export const ProductManagement = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} align="center">
-                  Không tìm thấy sản phẩm nào.
+                <TableCell colSpan={7} align="center">
+                  {" "}
+                  {/* Cập nhật colspan */}
+                  Không tìm thấy sản phẩm nào
                 </TableCell>
               </TableRow>
             )}
@@ -236,19 +254,25 @@ export const ProductManagement = () => {
         </Table>
       </TableContainer>
 
-      {data.data.length > 0 && (
+      {filteredProducts.length > 0 && (
         <div className="flex justify-between items-center px-3 py-5">
           <div className="text-sm">
             Hiển thị {filteredProducts.length} sản phẩm
           </div>
           <Pagination
-            page={data.page}
-            count={Math.ceil(data.total / LIMIT_RECORD_PER_PAGE)}
-            shape="rounded"
+            page={page}
+            count={Math.ceil(filteredProducts.length / LIMIT_RECORD_PER_PAGE)}
             onChange={handleChangePage}
           />
         </div>
       )}
+
+      <ProductDialog
+        open={isDialogOpen}
+        onClose={handleCloseDialog}
+        onSave={handleSave}
+        product={editingProduct}
+      />
     </div>
   );
-};
+}

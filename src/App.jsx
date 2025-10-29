@@ -17,6 +17,9 @@ import CustomerManagement from "./pages/admin/CustomerMangement/CustomerMangemen
 import SupplierManagement from "./pages/admin/SupplierManagement/SupplierManagement";
 import FeedbackManagement from "./pages/admin/Feedback/FeedbackManagement";
 import InvoiceManagement from "./pages/admin/InvoiceManagement/InvoiceManagement";
+import ProductPage from "./pages/account/Product/ProductPage";
+import DetailProduct from "./pages/account/DetailProduct/DetailProduct";
+import Cart from "./pages/account/Cart/Cart";
 
 function App() {
   return (
@@ -48,6 +51,30 @@ function App() {
             </LayoutAccount>
           }
         ></Route>
+        <Route
+          path="/products/:categoryId"
+          element={
+            <LayoutAccount>
+              <ProductPage />
+            </LayoutAccount>
+          }
+        />
+        <Route
+          path="/product-detail/:productId"
+          element={
+            <LayoutAccount>
+              <DetailProduct />
+            </LayoutAccount>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <LayoutAccount>
+              <Cart />
+            </LayoutAccount>
+          }
+        />
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<LayoutAdmin />}>
             {/* Dashboard */}

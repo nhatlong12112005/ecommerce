@@ -10,7 +10,7 @@ export const Register = () => {
     email: "",
     userName: "",
     password: "",
-    name: "",
+
     phone: "",
   });
   const handleChange = (e) => {
@@ -35,13 +35,7 @@ export const Register = () => {
     <div className=" flex items-center justify-center min-h-screen ">
       <div className=" w-full max-w-md bg-white p-8 shadow rounded ">
         <h2 className=" text-2xl font-bold mb-6 text-center ">Register</h2>
-        <input
-          className=" mb-4 w-full h-[50px] border border-gray p-5 rounded-lg text-[14px] "
-          type="text"
-          name="name"
-          placeholder="Name"
-          onChange={handleChange}
-        />
+
         <input
           className=" mb-4 w-full h-[50px] border border-gray p-5 rounded-lg text-[14px] "
           type="text"

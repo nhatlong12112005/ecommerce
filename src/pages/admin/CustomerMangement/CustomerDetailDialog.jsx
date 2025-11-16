@@ -31,7 +31,8 @@ export default function CustomerDetailDialog({ user, open, onClose }) {
       </DialogTitle>
       <DialogContent dividers>
         <Typography gutterBottom>
-          <strong>ID:</strong> {user._id}
+          {/* SỬA LẠI: Dùng user.id (thống nhất với management) */}
+          <strong>ID:</strong> {user.id}
         </Typography>
         <Typography gutterBottom>
           <strong>Email:</strong> {user.email}
@@ -48,13 +49,16 @@ export default function CustomerDetailDialog({ user, open, onClose }) {
         </Typography>
         <Typography gutterBottom>
           <strong>Trạng thái:</strong>{" "}
-          <span style={{ color: user.status === "active" ? "green" : "red" }}>
-            {user.status === "active" ? "Đang hoạt động" : "Đã bị khóa"}
+          {/* SỬA LẠI: Dùng user.isActive (boolean) */}
+          <span style={{ color: user.isActive ? "green" : "red" }}>
+            {user.isActive ? "Đang hoạt động" : "Đã bị khóa"}
           </span>
         </Typography>
         <Divider sx={{ my: 2 }} />
         <Typography variant="h6">Lịch sử đơn hàng</Typography>
-        {user.orderHistory.length > 0 ? (
+
+        {/* SỬA LẠI: Thêm check an toàn "user.orderHistory &&" */}
+        {user.orderHistory && user.orderHistory.length > 0 ? (
           user.orderHistory.map((order) => (
             <div key={order.id} style={{ marginTop: "10px" }}>
               <Typography>

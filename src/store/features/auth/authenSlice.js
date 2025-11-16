@@ -1,7 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { jwtDecode } from "jwt-decode";
 
 const initialState = {
-  USER: JSON.parse(localStorage.getItem("user")) || null,
+  user: JSON.parse(localStorage.getItem("user")) || null,
+  access_token: localStorage.getItem("access_token") || null,
 };
 
 const authSlice = createSlice({
@@ -9,12 +11,25 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     doLogin: (state, action) => {
-      state.USER = action.payload; // ✅ nhận trực tiếp user object
-      localStorage.setItem("user", JSON.stringify(action.payload));
+      const { access_token } = action.payload;
+
+      // Giải mã token để lấy thông tin user
+      const decoded = jwtDecode(access_token);
+
+      // Lưu thông tin user đã decode
+      state.user = decoded;
+      state.access_token = access_token;
+
+      // Lưu vào localStorage
+      localStorage.setItem("user", JSON.stringify(decoded));
+      localStorage.setItem("access_token", access_token);
     },
+
     logout: (state) => {
-      state.USER = null;
+      state.user = null;
+      state.access_token = null;
       localStorage.removeItem("user");
+      localStorage.removeItem("access_token");
     },
   },
 });

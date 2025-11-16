@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -9,75 +9,85 @@ import {
   IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import {
+  addCategory,
+  updateCategories,
+} from "../../../services/category-management";
 
-// State ban đầu cho form
-const initialState = {
-  name: "",
-  description: "",
-};
+export default function CategoryDialog({
+  open,
+  onClose,
+  onSuccess,
+  detailCategory,
+}) {
+  const [formCategory, setFormCategory] = useState({ name: "" });
 
-export default function CategoryDialog({ open, onClose, onSave, category }) {
-  const [formData, setFormData] = useState(initialState);
-  const isEditing = !!category; // Xác định là đang sửa hay thêm mới
-
-  // useEffect để điền dữ liệu vào form khi sửa
-  useEffect(() => {
-    if (category) {
-      setFormData(category);
-    } else {
-      setFormData(initialState);
-    }
-  }, [category, open]);
+  const handleClose = () => {
+    onClose();
+    setFormCategory({ name: "" });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormCategory((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    onSave(formData);
-    onClose(); // Tự động đóng dialog sau khi lưu
+  const handleSave = async () => {
+    try {
+      if (detailCategory && detailCategory.id) {
+        const res = await updateCategories(detailCategory.id, formCategory);
+        if (res.status === 200) {
+          onSuccess();
+          handleClose();
+        }
+      } else {
+        const res = await addCategory(formCategory);
+        if (res.status === 201) {
+          onSuccess();
+          handleClose();
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  useEffect(() => {
+    if (detailCategory && open) {
+      setFormCategory({ name: detailCategory.name });
+    } else {
+      setFormCategory({ name: "" });
+    }
+  }, [detailCategory, open]);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {isEditing ? "Chỉnh sửa danh mục" : "Thêm danh mục mới"}
+        {detailCategory && detailCategory.id ? "Sửa danh mục" : "Thêm danh mục"}
         <IconButton
           aria-label="close"
-          onClick={onClose}
+          onClick={handleClose}
           sx={{ position: "absolute", right: 8, top: 8 }}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        <div className="flex flex-col gap-4 pt-2">
-          <TextField
-            label="Tên danh mục"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
-          <TextField
-            label="Mô tả"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            fullWidth
-            multiline
-            rows={3}
-          />
-        </div>
+        <TextField
+          label="Tên danh mục"
+          name="name"
+          value={formCategory.name}
+          onChange={handleChange}
+          fullWidth
+          required
+        />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Hủy</Button>
+        <Button onClick={handleClose}>Hủy</Button>
         <Button
           onClick={handleSave}
           variant="contained"
-          disabled={!formData.name}
+          disabled={!formCategory.name}
         >
           Lưu
         </Button>

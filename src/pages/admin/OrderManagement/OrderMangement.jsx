@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Button,
   Divider,
@@ -14,116 +14,91 @@ import {
   Paper,
   MenuItem,
   Chip,
+  CircularProgress,
 } from "@mui/material";
 import dayjs from "dayjs";
 import OrderDetailsDialog from "./DetailOrder";
-
+import useGetListOrder from "../../../hooks/useGetListOrder";
+import { toast } from "react-toastify";
+import { updateStatus } from "../../../services/order";
+import { useLocation, useNavigate } from "react-router-dom";
 const LIMIT_RECORD_PER_PAGE = 10;
 
-const mockOrders = [
-  {
-    _id: "DH001",
-    customerName: "Nguyễn Văn An",
-    shippingPhone: "0908123456",
-    totalAmount: 33990000,
-    status: "Chờ xác nhận",
-    createdAt: "2025-10-28T10:00:00Z",
-    shippingAddress: "123 Đường ABC, Phường X, Quận Y, TP.HCM",
-    items: [
-      {
-        productId: "p1",
-        name: "iPhone 17 Pro Max",
-        quantity: 1,
-        price: 33990000,
-      },
-    ],
-  },
-  {
-    _id: "DH002",
-    customerName: "Trần Thị Bích",
-    shippingPhone: "0912789101",
-    totalAmount: 59480000,
-    status: "Đang giao",
-    createdAt: "2025-10-27T14:30:00Z",
-    shippingAddress: "456 Đường DEF, Phường A, Quận B, Hà Nội",
-    items: [
-      {
-        productId: "p3",
-        name: "MacBook Pro M5 14-inch",
-        quantity: 1,
-        price: 52990000,
-      },
-      { productId: "p4", name: "AirPods Pro 3", quantity: 1, price: 6490000 },
-    ],
-    shipper: "Giao Hàng Nhanh",
-  },
-  {
-    _id: "DH003",
-    customerName: "Lê Văn Cường",
-    shippingPhone: "0987654321",
-    totalAmount: 31990000,
-    status: "Hoàn thành",
-    createdAt: "2025-10-26T09:15:00Z",
-    shippingAddress: "789 Đường GHI, Phường C, Quận D, Đà Nẵng",
-    items: [
-      {
-        productId: "p2",
-        name: "Samsung Galaxy S26 Ultra",
-        quantity: 1,
-        price: 31990000,
-      },
-    ],
-    shipper: "Viettel Post",
-  },
-  {
-    _id: "DH004",
-    customerName: "Phạm Thị Dung",
-    shippingPhone: "0939888999", // Thêm SĐT
-    totalAmount: 6490000,
-    status: "Đã hủy",
-    createdAt: "2025-10-25T11:00:00Z",
-    shippingAddress: "101 Đường KLM, Phường E, Quận F, Cần Thơ",
-    items: [
-      { productId: "p4", name: "AirPods Pro 3", quantity: 1, price: 6490000 },
-    ],
-  },
-];
-
+// (Các hàm helper getStatusChipColor, getStatusLabel... giữ nguyên)
 const getStatusChipColor = (status) => {
   switch (status) {
-    case "Hoàn thành":
-      return "success";
-    case "Đang giao":
-      return "info";
-    case "Đã xác nhận":
-      return "primary";
-    case "Chờ xác nhận":
+    case "PENDING":
       return "warning";
-    case "Đã hủy":
+    case "SHIPPED":
+      return "info";
+    case "COMPLETED":
+      return "success";
+    case "CANCELLED":
       return "error";
     default:
       return "default";
   }
 };
+const getStatusLabel = (status) => {
+  switch (status) {
+    case "PENDING":
+      return "Chờ xử lý";
+    case "SHIPPED":
+      return "Đang giao";
+    case "COMPLETED":
+      return "Hoàn thành";
+    case "CANCELLED":
+      return "Đã hủy";
+    default:
+      return status;
+  }
+};
 
 export default function OrderManagement() {
-  const [orders, setOrders] = useState(mockOrders);
-  const [filters, setFilters] = useState({ search: "", status: "" });
-  const [page, setPage] = useState(1);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const urlParams = useMemo(() => {
+    return new URLSearchParams(location.search);
+  }, [location.search]);
+  const [page, setPage] = useState(() => {
+    return Number(urlParams.get("page") || 1);
+  });
+  const [statusFilter, setStatusFilter] = useState(() => {
+    return urlParams.get("status") || ""; // "" = 'Tất cả'
+  });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const filteredOrders = orders.filter((order) => {
-    const searchTerm = filters.search.toLowerCase();
-    const matchSearch =
-      order._id.toLowerCase().includes(searchTerm) ||
-      order.customerName.toLowerCase().includes(searchTerm) ||
-      order.shippingPhone.includes(searchTerm);
-    const matchStatus = filters.status ? order.status === filters.status : true;
-    return matchSearch && matchStatus;
+  const {
+    data: ordersResponse,
+    isLoading,
+    handleGetList,
+  } = useGetListOrder({
+    page,
+    limit: LIMIT_RECORD_PER_PAGE,
+    status: statusFilter,
   });
 
-  const handleChangePage = (event, value) => setPage(value);
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    // Chỉ thêm vào URL nếu nó khác giá trị mặc định
+    if (page > 1) {
+      params.set("page", page.toString());
+    }
+    if (statusFilter) {
+      // Nếu statusFilter không phải ""
+      params.set("status", statusFilter);
+    }
+
+    // Cập nhật URL mà không reload trang
+    navigate({ search: params.toString() }, { replace: true });
+  }, [page, statusFilter, navigate]);
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [statusFilter]);
 
   const handleOpenDialog = (order) => {
     setSelectedOrder(order);
@@ -135,16 +110,41 @@ export default function OrderManagement() {
     setSelectedOrder(null);
   };
 
-  const handleUpdateOrder = (updatedOrder) => {
-    setOrders(
-      orders.map((order) =>
-        order._id === updatedOrder._id ? updatedOrder : order
-      )
-    );
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
+
+  // Hàm update (Giữ nguyên)
+  const handleUpdateOrder = async (orderToUpdate) => {
+    if (!orderToUpdate || !orderToUpdate.id || !orderToUpdate.status) {
+      toast.error("Dữ liệu cập nhật không hợp lệ!");
+      return;
+    }
+    const { id, status } = orderToUpdate;
+    try {
+      await updateStatus(id, status);
+      toast.success(
+        `Đã cập nhật đơn hàng #${id.split("-")[0]} sang [${getStatusLabel(
+          status
+        )}]`
+      );
+      handleCloseDialog();
+      if (handleGetList) {
+        handleGetList();
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật đơn hàng:", error);
+      toast.error("Cập nhật thất bại. Vui lòng thử lại.");
+    }
+  };
+
+  const orderList = ordersResponse?.data || [];
+  const totalPages = ordersResponse?.totalPages || 0;
+  const totalItems = ordersResponse?.totalItems || 0;
 
   return (
     <div>
+      {/* (Toàn bộ JSX bên dưới giữ nguyên y hệt) */}
       <Typography variant="h6" gutterBottom>
         Quản lý đơn hàng
       </Typography>
@@ -152,26 +152,18 @@ export default function OrderManagement() {
       <div className="flex flex-wrap justify-between gap-3 pb-4 items-center">
         <div className="flex flex-wrap gap-3 items-center">
           <TextField
-            label="Tìm theo mã ĐH, tên KH, SĐT" // Cập nhật label
-            size="small"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            style={{ minWidth: 250 }}
-          />
-          <TextField
             label="Trạng thái"
             size="small"
             select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             style={{ minWidth: 180 }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
           >
             <MenuItem value="">Tất cả</MenuItem>
-            <MenuItem value="Chờ xác nhận">Chờ xác nhận</MenuItem>
-            <MenuItem value="Đã xác nhận">Đã xác nhận</MenuItem>
-            <MenuItem value="Đang giao">Đang giao</MenuItem>
-            <MenuItem value="Hoàn thành">Hoàn thành</MenuItem>
-            <MenuItem value="Đã hủy">Đã hủy</MenuItem>
+            <MenuItem value="PENDING">Chờ xử lý</MenuItem>
+            <MenuItem value="SHIPPED">Đang Giao Hàng</MenuItem>
+            <MenuItem value="COMPLETED">Hoàn thành</MenuItem>
+            <MenuItem value="CANCELLED">Đã hủy</MenuItem>
           </TextField>
         </div>
       </div>
@@ -184,7 +176,7 @@ export default function OrderManagement() {
             <TableRow>
               <TableCell>Mã đơn hàng</TableCell>
               <TableCell>Tên khách hàng</TableCell>
-              <TableCell>Số điện thoại</TableCell> {/* Thêm cột SĐT */}
+              <TableCell>Số điện thoại</TableCell>
               <TableCell>Tổng tiền</TableCell>
               <TableCell>Trạng thái</TableCell>
               <TableCell>Ngày tạo</TableCell>
@@ -192,13 +184,20 @@ export default function OrderManagement() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => (
-                <TableRow key={order._id}>
-                  <TableCell>{order._id}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell>{order.shippingPhone}</TableCell>{" "}
-                  {/* Hiển thị SĐT */}
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : orderList.length > 0 ? (
+              orderList.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell title={order.id}>
+                    {order.id.split("-")[0]}...
+                  </TableCell>
+                  <TableCell>{order.user.name}</TableCell>
+                  <TableCell>{order.user.phone}</TableCell>
                   <TableCell>
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
@@ -207,13 +206,13 @@ export default function OrderManagement() {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={order.status}
+                      label={getStatusLabel(order.status)}
                       color={getStatusChipColor(order.status)}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
-                    {dayjs(order.createdAt).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(order.orderDate).format("DD/MM/YYYY HH:mm")}
                   </TableCell>
                   <TableCell align="center">
                     <Button
@@ -229,8 +228,6 @@ export default function OrderManagement() {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} align="center">
-                  {" "}
-                  {/* Cập nhật colspan */}
                   Không tìm thấy đơn hàng nào
                 </TableCell>
               </TableRow>
@@ -239,15 +236,16 @@ export default function OrderManagement() {
         </Table>
       </TableContainer>
 
-      {filteredOrders.length > 0 && (
+      {totalPages > 0 && (
         <div className="flex justify-between items-center px-3 py-5">
           <div className="text-sm">
-            Hiển thị {filteredOrders.length} đơn hàng
+            Hiển thị {orderList.length} trên tổng số {totalItems} đơn hàng
           </div>
           <Pagination
             page={page}
-            count={Math.ceil(filteredOrders.length / LIMIT_RECORD_PER_PAGE)}
+            count={totalPages}
             onChange={handleChangePage}
+            color="primary"
           />
         </div>
       )}

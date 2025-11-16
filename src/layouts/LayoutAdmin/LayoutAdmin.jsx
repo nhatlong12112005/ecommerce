@@ -29,6 +29,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import FeedbackIcon from "@mui/icons-material/Feedback";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import HomeIcon from "@mui/icons-material/Home";
+import InventoryIcon from "@mui/icons-material/Inventory"; // ✅ Icon cho Quản lý phiếu nhập
 import { Outlet, Link, useLocation } from "react-router-dom";
 
 const drawerWidth = 260;
@@ -108,29 +109,34 @@ export default function LayoutAdmin() {
   const menuItems = [
     { text: "Dashboard", icon: <DashboardIcon />, path: "/admin" },
     {
-      text: "Category Management",
+      text: "Quản lý danh mục",
       icon: <CategoryIcon />,
       path: "/admin/Category-Management",
     },
     {
-      text: "Product Management",
+      text: "Quản lý sản phẩm",
       icon: <ProductionQuantityLimitsIcon />,
       path: "/admin/product",
     },
     {
-      text: "Order Management",
+      text: "Quản lý đơn hàng",
       icon: <ShoppingCartIcon />,
       path: "/admin/order",
     },
     {
-      text: "Customer Management",
+      text: "Quản lý khách hàng",
       icon: <PeopleIcon />,
       path: "/admin/customer",
     },
     {
-      text: "Supplier Management",
+      text: "Quản lý thương hiệu",
       icon: <LocalShippingIcon />,
-      path: "/admin/supplier",
+      path: "/admin/brand",
+    },
+    {
+      text: "Quản lý phiếu nhập", // ✅ Thêm mới
+      icon: <InventoryIcon />,
+      path: "/admin/import-management",
     },
     {
       text: "Feedback Management",

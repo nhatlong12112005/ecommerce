@@ -9,7 +9,8 @@ const useGetListCategory = () => {
     try {
       setIsLoading(true);
       const res = await fetchCategories();
-      setData(res.data || []); // backend trả về data hoặc danh sách
+
+      setData(res || []);
     } catch (err) {
       console.error("Error fetching category list", err);
     } finally {

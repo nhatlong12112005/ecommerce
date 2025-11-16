@@ -6,34 +6,35 @@ import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
-import PersonAdd from "@mui/icons-material/PersonAdd";
-import Settings from "@mui/icons-material/Settings";
 import Logout from "@mui/icons-material/Logout";
+import HistoryIcon from "@mui/icons-material/History"; // ✅ Thêm icon lịch sử
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../store/features/auth/authenSlice";
-// import { setCart } from "../store/features/cart/cartSlice";
+import { clearCart } from "../store/features/cart/cartSlice";
 
 export default function ToogleAccountMenu() {
-  const { USER } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const handleLogout = () => {
-    // dispatch(setCart([]));
     dispatch(logout());
+    dispatch(clearCart());
   };
 
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
+
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
+
   const handleClose = () => {
     setAnchorEl(null);
   };
+
   return (
     <React.Fragment>
       <Box sx={{ display: "flex", alignItems: "center", textAlign: "center" }}>
@@ -47,11 +48,12 @@ export default function ToogleAccountMenu() {
             aria-expanded={open ? "true" : undefined}
           >
             <Avatar sx={{ width: 32, height: 32 }}>
-              {USER?.name ? USER.name.slice(0, 1) : "?"}
+              {user?.name ? user.name.slice(0, 1).toUpperCase() : "U"}
             </Avatar>
           </IconButton>
         </Tooltip>
       </Box>
+
       <Menu
         anchorEl={anchorEl}
         id="account-menu"
@@ -89,33 +91,38 @@ export default function ToogleAccountMenu() {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <MenuItem onClick={handleClose}>
-          <Avatar /> Profile
-        </MenuItem>
-        {USER.role === "ADMIN" ? (
+        {user?.role === "admin" ? (
           <MenuItem onClick={() => navigate("/admin")}>
             <Avatar /> My Admin
           </MenuItem>
         ) : (
-          <MenuItem onClick={handleClose}>
-            <Avatar /> My Account
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              navigate("/account");
+            }}
+          >
+            <Avatar />
+            Thông tin cá nhân
           </MenuItem>
         )}
 
+        {/* ✅ Thêm icon Lịch sử mua hàng */}
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            navigate("/purchase-history");
+          }}
+        >
+          <ListItemIcon>
+            <HistoryIcon fontSize="small" />
+          </ListItemIcon>
+          Lịch sử mua hàng
+        </MenuItem>
+
         <Divider />
-        <MenuItem onClick={handleClose}>
-          <ListItemIcon>
-            <PersonAdd fontSize="small" />
-          </ListItemIcon>
-          Add another account
-        </MenuItem>
-        <MenuItem onClick={handleClose}>
-          <ListItemIcon>
-            <Settings fontSize="small" />
-          </ListItemIcon>
-          Settings
-        </MenuItem>
-        <MenuItem onClick={() => handleLogout()}>
+
+        <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <Logout fontSize="small" />
           </ListItemIcon>

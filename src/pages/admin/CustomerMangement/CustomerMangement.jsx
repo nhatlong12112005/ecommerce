@@ -52,7 +52,7 @@ const ConfirmationDialog = ({ open, onClose, onConfirm, title, content }) => (
 
 export default function CustomerManagement() {
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState(""); // trạng thái string: "", "active", "locked"
+  const [status, setStatus] = useState(-1); // Phần lọc này ĐÃ ĐÚNG
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -71,7 +71,7 @@ export default function CustomerManagement() {
     page,
     limit: LIMIT_RECORD_PER_PAGE,
     search: debouncedSearch,
-    status, // truyền thẳng status string
+    status, // Truyền số -1, 0, hoặc 1 (Đã đúng)
     refetchTrigger,
   });
 
@@ -95,16 +95,28 @@ export default function CustomerManagement() {
       onConfirm: () => {},
     });
 
+  // === BẮT ĐẦU SỬA LỖI ===
   const handleToggleLock = async (user) => {
     setProcessingId(user.id);
     handleCloseConfirm();
-    const newStatus = !user.isActive;
+
+    // 1. Lấy trạng thái boolean MỚI (true = active, false = locked)
+    const newBooleanStatus = !user.isActive;
+
+    // 2. Chuyển đổi boolean (true/false) sang SỐ (1/0)
+    //    mà API backend (UpdateUserStatusDto) đang mong đợi
+    const newNumericStatus = newBooleanStatus ? 1 : 0; // vd: 1 nếu newBooleanStatus là true
+
     try {
-      await updateCustomerStatus(user.id, newStatus);
+      // 3. Gửi đi ĐÚNG ĐỊNH DẠNG object mà DTO yêu cầu
+      //    (Giả sử service `updateCustomerStatus` sẽ gửi object này làm body)
+      await updateCustomerStatus(user.id, { isActive: newNumericStatus });
+
       toast.success(
-        `Đã ${newStatus ? "mở khóa" : "khóa"} tài khoản ${user.name}`
+        // Dùng newBooleanStatus cho tin nhắn toast thì rõ nghĩa hơn
+        `Đã ${newBooleanStatus ? "mở khóa" : "khóa"} tài khoản ${user.name}`
       );
-      handleRefetch();
+      handleRefetch(); // Bây giờ sẽ chạy thành công
     } catch (err) {
       console.error("Error updating status", err);
       toast.error("Có lỗi xảy ra, vui lòng thử lại.");
@@ -112,6 +124,7 @@ export default function CustomerManagement() {
       setProcessingId(null);
     }
   };
+  // === KẾT THÚC SỬA LỖI ===
 
   const handleDelete = async (user) => {
     setProcessingId(user.id);
@@ -164,6 +177,7 @@ export default function CustomerManagement() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {/* Phần lọc này đã đúng */}
           <TextField
             label="Trạng thái"
             select
@@ -172,9 +186,9 @@ export default function CustomerManagement() {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <MenuItem value="">Tất cả</MenuItem>
-            <MenuItem value="active">Hoạt động</MenuItem>
-            <MenuItem value="locked">Đã khóa</MenuItem>
+            <MenuItem value={-1}>Tất cả</MenuItem>
+            <MenuItem value={1}>Hoạt động</MenuItem>
+            <MenuItem value={0}>Đã khóa</MenuItem>
           </TextField>
         </div>
       </div>

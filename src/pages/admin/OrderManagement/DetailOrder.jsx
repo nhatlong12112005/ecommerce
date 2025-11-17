@@ -102,6 +102,9 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
             <Typography>
               <b>Địa chỉ giao hàng:</b> {currentOrder.user?.address}
             </Typography>
+            <Typography>
+              <b>Thanh toán: Tiền mặt</b>
+            </Typography>
           </Grid>
 
           {/* (Cập nhật & Giao hàng - Giữ nguyên) */}

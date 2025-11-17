@@ -15,8 +15,8 @@ import OrderManagement from "./pages/admin/OrderManagement/OrderMangement";
 import DetailOrder from "./pages/admin/OrderManagement/DetailOrder";
 import CustomerManagement from "./pages/admin/CustomerMangement/CustomerMangement";
 import BrandManagement from "./pages/admin/BrandManagement/BrandManagement";
-import FeedbackManagement from "./pages/admin/Feedback/FeedbackManagement";
-import InvoiceManagement from "./pages/admin/InvoiceManagement/InvoiceManagement";
+// import FeedbackManagement from "./pages/admin/Feedback/FeedbackManagement";
+
 import ProductPage from "./pages/account/Product/ProductPage";
 import DetailProduct from "./pages/account/DetailProduct/DetailProduct";
 import Cart from "./pages/account/Cart/Cart";
@@ -30,6 +30,7 @@ import PhieuNhap from "./pages/admin/PhieuNhap/PhieuNhap";
 import PrivateRoute from "./components/PrivateRoute ";
 import Order from "./pages/account/Cart/Order";
 import OrderReview from "./pages/account/MyAccount/OrderReview";
+import SupplierManagement from "./pages/admin/SupplierManagent/SupplierManagement";
 
 function App() {
   return (
@@ -174,9 +175,7 @@ function App() {
             <Route path="customer" element={<CustomerManagement />} />
 
             <Route path="brand" element={<BrandManagement />} />
-
-            <Route path="feedback" element={<FeedbackManagement />} />
-            <Route path="invoice" element={<InvoiceManagement />} />
+            <Route path="supplier" element={<SupplierManagement />} />
           </Route>
         </Route>
       </Routes>

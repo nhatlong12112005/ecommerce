@@ -29,7 +29,8 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import FeedbackIcon from "@mui/icons-material/Feedback";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import HomeIcon from "@mui/icons-material/Home";
-import InventoryIcon from "@mui/icons-material/Inventory"; // ✅ Icon cho Quản lý phiếu nhập
+import InventoryIcon from "@mui/icons-material/Inventory";
+import ApartmentIcon from "@mui/icons-material/Apartment";
 import { Outlet, Link, useLocation } from "react-router-dom";
 
 const drawerWidth = 260;
@@ -134,20 +135,16 @@ export default function LayoutAdmin() {
       path: "/admin/brand",
     },
     {
+      text: "Quản lý nhà cung cấp", // <-- THÊM MỚI
+      icon: <ApartmentIcon />,
+      path: "/admin/supplier",
+    },
+    {
       text: "Quản lý phiếu nhập", // ✅ Thêm mới
       icon: <InventoryIcon />,
       path: "/admin/import-management",
     },
-    {
-      text: "Feedback Management",
-      icon: <FeedbackIcon />,
-      path: "/admin/feedback",
-    },
-    {
-      text: "Quản lý Hóa đơn",
-      icon: <ReceiptIcon />,
-      path: "/admin/invoice",
-    },
+
     { text: "Trang chủ", icon: <HomeIcon />, path: "/" },
   ];
 

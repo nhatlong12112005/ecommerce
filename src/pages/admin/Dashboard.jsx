@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Grid,
   Card,
@@ -13,9 +13,10 @@ import {
   TableRow,
   Box,
   Button,
-  TextField, // Thêm TextField để dùng cho Select
-  MenuItem, // Thêm MenuItem cho các lựa chọn trong Select
+  TextField,
+  MenuItem,
 } from "@mui/material";
+
 import {
   BarChart,
   Bar,
@@ -23,151 +24,144 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
-import dayjs from "dayjs";
 
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
 import BarChartIcon from "@mui/icons-material/BarChart";
-import PieChartIcon from "@mui/icons-material/PieChart";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import FilterListIcon from "@mui/icons-material/FilterList";
 
-import SalesDetailDialog from "./SalesDetailDialog";
-
-// Dữ liệu mock
-const mockSalesData = [
-  {
-    product: {
-      name: "iPhone 17 Pro Max",
-      category: "Điện thoại",
-      price: 33990000,
-    },
-    quantity: 70,
-    date: "2025-10-05",
-  },
-  {
-    product: {
-      name: "Samsung Galaxy S26 Ultra",
-      category: "Điện thoại",
-      price: 31990000,
-    },
-    quantity: 25,
-    date: "2025-10-08",
-  },
-  {
-    product: {
-      name: "MacBook Pro M5 14-inch",
-      category: "Laptop",
-      price: 52990000,
-    },
-    quantity: 35,
-    date: "2025-10-12",
-  },
-  {
-    product: { name: "AirPods Pro 3", category: "Phụ kiện", price: 6490000 },
-    quantity: 180,
-    date: "2025-09-15",
-  },
-  {
-    product: { name: "AirPods Pro 3", category: "Phụ kiện", price: 6490000 },
-    quantity: 100,
-    date: "2025-10-15",
-  },
-  {
-    product: { name: "iPad Air 6", category: "Máy tính bảng", price: 18990000 },
-    quantity: 20,
-    date: "2025-10-20",
-  },
-];
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
-const formatCurrency = (value) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    value
-  );
-// Lấy danh sách các loại sản phẩm duy nhất từ dữ liệu
-const categories = [
-  ...new Set(mockSalesData.map((item) => item.product.category)),
-];
+import { getDashboardStatistics } from "../../services/statistics";
 
 export default function Dashboard() {
+  // --- STATE API ---
+  const [revenueByCategory, setRevenueByCategory] = useState([]);
+  const [topSellingProducts, setTopSellingProducts] = useState([]);
+  const [topCustomers, setTopCustomers] = useState([]);
+
+  // --- FILTERS ---
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(""); // ✅ State cho bộ lọc loại sản phẩm
+  const [selectedCategory, setSelectedCategory] = useState("");
 
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [selectedProductDetails, setSelectedProductDetails] = useState(null);
+  // // Danh sách category
+  // const categories = useMemo(() => {
+  //   return revenueByCategory.map((x) => x.name);
+  // }, [revenueByCategory]);
 
-  const { revenueByCategory, quantityByCategory, topSellingProducts } =
-    useMemo(() => {
-      const filteredSales = mockSalesData.filter((sale) => {
-        // Lọc theo ngày
-        const saleDate = dayjs(sale.date);
-        if (startDate && saleDate.isBefore(startDate, "day")) return false;
-        if (endDate && saleDate.isAfter(endDate, "day")) return false;
+  // --- SỬA GIAO DIỆN (SỐ 2) ---
+  // Money format (cho Bảng và Tooltip)
+  const formatCurrency = (value) =>
+    value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-        // ✅ Lọc theo loại sản phẩm
-        if (selectedCategory && sale.product.category !== selectedCategory)
-          return false;
+  // Axis format (cho trục Y của biểu đồ)
+  const formatAxis = (tick) => tick?.toLocaleString("vi-VN");
+  // --- KẾT THÚC SỬA GIAO DIỆN ---
 
-        return true;
-      });
+  // --- API Fetch (SỬA LOGIC DỮ LIỆU - SỐ 1) ---
+  const fetchDashboard = async () => {
+    try {
+      const params = {};
 
-      const stats = { revenue: {}, quantity: {}, products: {} };
-      filteredSales.forEach((sale) => {
-        const { category, name, price } = sale.product;
-        const saleRevenue = price * sale.quantity;
-        stats.revenue[category] = (stats.revenue[category] || 0) + saleRevenue;
-        stats.quantity[category] =
-          (stats.quantity[category] || 0) + sale.quantity;
-        if (!stats.products[name]) {
-          stats.products[name] = {
-            name,
-            category,
-            sold: 0,
-            revenue: 0,
-            salesHistory: [],
-          };
-        }
-        stats.products[name].sold += sale.quantity;
-        stats.products[name].revenue += saleRevenue;
-        stats.products[name].salesHistory.push({
-          date: sale.date,
-          quantity: sale.quantity,
-        });
-      });
+      if (startDate) params.fromDate = startDate.toISOString();
+      if (endDate) params.toDate = endDate.toISOString();
+      if (selectedCategory) params.category = selectedCategory;
 
-      const revenueByCategory = Object.keys(stats.revenue)
-        .map((name) => ({ name, "Doanh thu": stats.revenue[name] }))
-        .sort((a, b) => b["Doanh thu"] - a["Doanh thu"]);
-      const quantityByCategory = Object.keys(stats.quantity).map((name) => ({
-        name,
-        value: stats.quantity[name],
+      const res = await getDashboardStatistics(params);
+
+      // --- Dữ liệu gốc từ API ---
+      const revenueFromApi = Array.isArray(res.revenueByCategory)
+        ? res.revenueByCategory
+        : [];
+      const topProductsFromApi = Array.isArray(res.topSellingProducts)
+        ? res.topSellingProducts
+        : [];
+      const customersFromApi = Array.isArray(res.topCustomers)
+        ? res.topCustomers
+        : [];
+
+      // --- 1. Xử lý Top Selling Products (Vẫn giữ nguyên) ---
+      const mappedTopProducts = topProductsFromApi.map((item) => ({
+        name: item.productName,
+        category: item.categoryName,
+        sold: Number(item.totalSold),
+        revenue: Number(item.totalRevenue),
       }));
-      const topSellingProducts = Object.values(stats.products).sort(
-        (a, b) => b.sold - a.sold
+      setTopSellingProducts(mappedTopProducts);
+
+      // --- 2. Xử lý Top Customers (Vẫn giữ nguyên) ---
+      setTopCustomers(
+        customersFromApi.map((item) => ({
+          customerId: item.userId,
+          name: item.userName,
+          totalSpent: Number(item.totalSpent),
+        }))
       );
 
-      return { revenueByCategory, quantityByCategory, topSellingProducts };
-    }, [startDate, endDate, selectedCategory]); // ✅ Thêm selectedCategory vào dependency
+      // --- 3. [PHẦN SỬA LẠI] Tính toán lại Revenue By Category ---
+      // Tự tính tổng doanh thu từ 'mappedTopProducts'
+      // vì 'res.revenueByCategory' từ API đang trả về 3tr (sai)
+
+      const calculatedRevenueMap = new Map();
+
+      // Lấy dữ liệu từ top products (vì nó có vẻ đúng - 50tr)
+      mappedTopProducts.forEach((product) => {
+        const currentRevenue = calculatedRevenueMap.get(product.category) || 0;
+        calculatedRevenueMap.set(
+          product.category,
+          currentRevenue + product.revenue
+        );
+      });
+
+      // Lấy các danh mục khác từ API (nếu có)
+      // mà không xuất hiện trong top products
+      revenueFromApi.forEach((apiCategory) => {
+        const categoryName = apiCategory.categoryName;
+        // Chỉ thêm nếu danh mục này chưa được tính từ top products
+        if (!calculatedRevenueMap.has(categoryName)) {
+          calculatedRevenueMap.set(
+            categoryName,
+            Number(apiCategory.totalRevenue)
+          );
+        }
+      });
+
+      // Chuyển Map thành mảng mà Recharts có thể đọc
+      const finalRevenueData = [];
+      for (const [name, revenue] of calculatedRevenueMap.entries()) {
+        finalRevenueData.push({
+          name: name,
+          DoanhThu: revenue,
+        });
+      }
+
+      // Set state cho biểu đồ bằng dữ liệu đã tính toán lại
+      setRevenueByCategory(finalRevenueData);
+      // --- [KẾT THÚC PHẦN SỬA DỮ LIỆU] ---
+    } catch (err) {
+      console.error("Lỗi tải thống kê:", err);
+      // Set mảng rỗng nếu có lỗi
+      setRevenueByCategory([]);
+      setTopSellingProducts([]);
+      setTopCustomers([]);
+    }
+  };
+  // --- KẾT THÚC SỬA LOGIC API ---
+
+  // Auto load when filter changes
+  useEffect(() => {
+    fetchDashboard();
+  }, [startDate, endDate, selectedCategory]);
 
   const handleResetFilter = () => {
     setStartDate(null);
     setEndDate(null);
-    setSelectedCategory(""); // ✅ Reset bộ lọc loại
+    setSelectedCategory("");
   };
-
-  const handleOpenDetails = (product) => {
-    setSelectedProductDetails(product);
-    setIsDetailOpen(true);
-  };
-  const handleCloseDetails = () => setIsDetailOpen(false);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -180,10 +174,11 @@ export default function Dashboard() {
           Bảng điều khiển Thống kê
         </Typography>
 
-        <Card sx={{ mb: 3, boxShadow: 1, border: "1px solid #e0e0e0" }}>
+        {/* BỘ LỌC */}
+        <Card sx={{ mb: 3, boxShadow: 1 }}>
           <CardHeader avatar={<FilterListIcon />} title="Bộ lọc thống kê" />
           <CardContent>
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={2}>
               <Grid xs={12} sm={4} md={3}>
                 <DatePicker
                   label="Từ ngày"
@@ -192,6 +187,7 @@ export default function Dashboard() {
                   slotProps={{ textField: { size: "small", fullWidth: true } }}
                 />
               </Grid>
+
               <Grid xs={12} sm={4} md={3}>
                 <DatePicker
                   label="Đến ngày"
@@ -201,26 +197,7 @@ export default function Dashboard() {
                   slotProps={{ textField: { size: "small", fullWidth: true } }}
                 />
               </Grid>
-              {/* ✅ Thêm bộ lọc loại sản phẩm */}
-              <Grid xs={12} sm={4} md={3}>
-                <TextField
-                  select
-                  label="Loại sản phẩm"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  size="small"
-                  fullWidth
-                >
-                  <MenuItem value="">
-                    <em>Tất cả</em>
-                  </MenuItem>
-                  {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                      {category}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
+
               <Grid>
                 <Button variant="text" onClick={handleResetFilter}>
                   Xóa bộ lọc
@@ -230,44 +207,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Khu vực nội dung chính */}
+        {/* --- Doanh thu theo loại --- */}
         <Grid container spacing={3}>
           <Grid xs={12} lg={6}>
-            <Card sx={{ boxShadow: 3, height: "100%" }}>
-              <CardHeader
-                avatar={<PieChartIcon color="primary" />}
-                title="Tỷ lệ sản phẩm đã bán"
-              />
-              <CardContent>
-                <Box sx={{ height: 350 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={quantityByCategory}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={120}
-                      >
-                        {quantityByCategory.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => `${value} sản phẩm`} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid xs={12} lg={6}>
-            <Card sx={{ boxShadow: 3, height: "100%" }}>
+            <Card sx={{ boxShadow: 3 }}>
               <CardHeader
                 avatar={<BarChartIcon color="primary" />}
                 title="Doanh thu theo loại sản phẩm"
@@ -275,18 +218,16 @@ export default function Dashboard() {
               <CardContent>
                 <Box sx={{ height: 350 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={revenueByCategory}
-                      margin={{ top: 5, right: 20, left: -20, bottom: 5 }}
-                    >
+                    <BarChart data={revenueByCategory}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" fontSize={12} />
-                      <YAxis
-                        fontSize={12}
-                        tickFormatter={(value) => `${value / 1000000}M`}
-                      />
+                      <XAxis dataKey="name" />
+
+                      {/* --- SỬA GIAO DIỆN (SỐ 2) --- */}
+                      <YAxis tickFormatter={formatAxis} />
+                      {/* --- KẾT THÚC SỬA GIAO DIỆN --- */}
+
                       <Tooltip formatter={(value) => formatCurrency(value)} />
-                      <Bar dataKey="Doanh thu" fill="#3366FF" />
+                      <Bar dataKey="DoanhThu" fill="#3366FF" />
                     </BarChart>
                   </ResponsiveContainer>
                 </Box>
@@ -294,12 +235,14 @@ export default function Dashboard() {
             </Card>
           </Grid>
 
+          {/* --- Top sản phẩm --- */}
           <Grid xs={12}>
             <Card sx={{ boxShadow: 3 }}>
               <CardHeader
                 avatar={<TrendingUpIcon color="primary" />}
                 title="Sản phẩm bán chạy"
               />
+
               <TableContainer>
                 <Table>
                   <TableHead>
@@ -314,35 +257,68 @@ export default function Dashboard() {
                       <TableCell sx={{ fontWeight: "bold" }} align="right">
                         Tổng doanh thu
                       </TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }} align="center">
-                        Hành động
-                      </TableCell>
                     </TableRow>
                   </TableHead>
+
                   <TableBody>
                     {topSellingProducts.length > 0 ? (
-                      topSellingProducts.map((product) => (
-                        <TableRow key={product.name} hover>
-                          <TableCell>{product.name}</TableCell>
-                          <TableCell>{product.category}</TableCell>
-                          <TableCell align="right">{product.sold}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 500 }}>
-                            {formatCurrency(product.revenue)}
-                          </TableCell>
-                          <TableCell align="center">
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => handleOpenDetails(product)}
-                            >
-                              Xem chi tiết
-                            </Button>
+                      topSellingProducts.map((p) => (
+                        <TableRow key={p.name} hover>
+                          <TableCell>{p.name}</TableCell>
+                          <TableCell>{p.category}</TableCell>
+                          <TableCell align="right">{p.sold}</TableCell>
+                          <TableCell align="right">
+                            {formatCurrency(p.revenue)}
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} align="center">
+                        <TableCell colSpan={4} align="center">
+                          Không có dữ liệu
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Card>
+          </Grid>
+
+          {/* --- Top khách hàng --- */}
+          <Grid xs={12}>
+            <Card sx={{ boxShadow: 3, mt: 3 }}>
+              <CardHeader
+                avatar={<TrendingUpIcon color="secondary" />}
+                title="Top 5 khách hàng mua nhiều nhất"
+              />
+
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Khách hàng
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }} align="right">
+                        Tổng tiền đã mua
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+
+                  <TableBody>
+                    {topCustomers.length > 0 ? (
+                      topCustomers.map((c) => (
+                        <TableRow key={c.customerId} hover>
+                          <TableCell>{c.name}</TableCell>
+                          <TableCell align="right">
+                            {formatCurrency(c.totalSpent)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center">
                           Không có dữ liệu
                         </TableCell>
                       </TableRow>
@@ -354,11 +330,6 @@ export default function Dashboard() {
           </Grid>
         </Grid>
       </Box>
-      <SalesDetailDialog
-        open={isDetailOpen}
-        onClose={handleCloseDetails}
-        product={selectedProductDetails}
-      />
     </LocalizationProvider>
   );
 }

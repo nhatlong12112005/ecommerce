@@ -14,9 +14,7 @@ export const fetchDataCustomer = async (params) => {
 };
 
 export const updateCustomerStatus = async (userId, isActive) => {
-  const res = await axiosClient.patch(`${API_USER}/${userId}/status`, {
-    isActive: isActive,
-  });
+  const res = await axiosClient.patch(`${API_USER}/${userId}/status`, isActive);
 
   return res.data;
 };

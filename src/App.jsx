@@ -20,7 +20,7 @@ import BrandManagement from "./pages/admin/BrandManagement/BrandManagement";
 import ProductPage from "./pages/account/Product/ProductPage";
 import DetailProduct from "./pages/account/DetailProduct/DetailProduct";
 import Cart from "./pages/account/Cart/Cart";
-import ForgotPassword from "./pages/login/ForgotPassWord";
+
 import MyAccount from "./pages/account/MyAccount/MyAccount";
 import PurchaseHistory from "./pages/account/MyAccount/PurchaseHistory";
 import OrderDetail from "./pages/account/MyAccount/OrderDetail ";
@@ -96,14 +96,6 @@ function App() {
           element={
             <LayoutAccount>
               <SearchPage />
-            </LayoutAccount>
-          }
-        ></Route>
-        <Route
-          path="/forgot"
-          element={
-            <LayoutAccount>
-              <ForgotPassword />
             </LayoutAccount>
           }
         ></Route>

@@ -85,9 +85,6 @@ export const Login = () => {
                   <Link to="/register" className="hover:underline">
                     Register
                   </Link>
-                  <Link to="/forgot" className="hover:underline">
-                    ForgotPassword
-                  </Link>
                 </div>
 
                 <button

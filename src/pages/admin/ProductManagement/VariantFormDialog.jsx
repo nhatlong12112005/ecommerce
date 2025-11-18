@@ -1,5 +1,4 @@
 // VariantFormDialog.jsx
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -58,7 +57,7 @@ export default function VariantFormDialog({
       const newVariants = [...prev];
       newVariants[index] = {
         ...newVariants[index],
-        [name]: name === "price" || name === "stock" ? Number(value) : value,
+        [name]: name === "price" ? Number(value) : value,
       };
       return newVariants;
     });
@@ -75,9 +74,7 @@ export default function VariantFormDialog({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Logic này LUÔN LÀ SỬA (vì ta sửa variants của 1 group đã có)
-
-      // 1. Lọc ra variant mới, cũ, và đã xóa
+      // 1. Phân loại variant
       const newVariants = variants.filter((v) => !v.id);
       const updatedVariants = variants.filter((v) => v.id);
       const updatedVariantIds = updatedVariants.map((v) => v.id);
@@ -86,26 +83,25 @@ export default function VariantFormDialog({
         (id) => !updatedVariantIds.includes(id)
       );
 
-      // 2. Thực thi các API
       const apiCalls = [];
 
-      // a. Tạo variant MỚI
+      // a. Tạo variant mới
       newVariants.forEach((v) =>
         apiCalls.push(
           createVariant({
-            ...v,
-            productColorId: colorGroup.id, // Dùng ID của group cha
+            storage: v.storage,
+            price: v.price,
+            productColorId: colorGroup.id, // ID của group cha
           })
         )
       );
 
-      // b. Cập nhật variant CŨ
+      // b. Cập nhật variant cũ
       updatedVariants.forEach((v) =>
         apiCalls.push(
           updateVariant(v.id, {
             storage: v.storage,
             price: v.price,
-            stock: v.stock,
           })
         )
       );
@@ -113,12 +109,12 @@ export default function VariantFormDialog({
       // c. Xóa variant
       variantsToDelete.forEach((id) => apiCalls.push(deleteVariant(id)));
 
-      // Chạy tất cả song song
+      // Chạy song song
       await Promise.all(apiCalls);
-      onSuccess(); // Báo thành công
+      onSuccess();
     } catch (error) {
       console.error("Lưu phiên bản thất bại:", error);
-      console.log("Lỗi response từ server:", error.response?.data); // 👈 Thêm dòng này
+      console.log("Lỗi response từ server:", error.response?.data);
       const errMsg =
         error.response?.data?.message || error.message || "Lỗi không xác định";
       alert(`Lưu thất bại: ${errMsg}`);
@@ -127,10 +123,8 @@ export default function VariantFormDialog({
     }
   };
 
-  // Logic kiểm tra form
   const isFormInvalid =
-    variants.length === 0 ||
-    variants.some((v) => !v.storage || v.price <= 0 || v.stock < 0);
+    variants.length === 0 || variants.some((v) => !v.storage || v.price <= 0);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -222,9 +216,11 @@ export default function VariantFormDialog({
                       name="stock"
                       type="number"
                       value={variant.stock}
-                      onChange={(e) => handleVariantChange(index, e)}
                       fullWidth
                       size="small"
+                      InputProps={{
+                        readOnly: true, // chỉ hiển thị, không chỉnh sửa
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={2} container justifyContent="flex-end">

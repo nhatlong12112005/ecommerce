@@ -45,7 +45,8 @@ const StarRatingDisplay = ({ rating }) => (
 const DetailProduct = () => {
   const { id: productId } = useParams();
   const dispatch = useDispatch();
-  const { access_token } = useSelector((state) => state.auth);
+  const { access_token, user } = useSelector((state) => state.auth);
+
   const navigate = useNavigate();
   const BACKEND_URL = "http://localhost:3000";
 
@@ -143,7 +144,14 @@ const DetailProduct = () => {
 
   // --- Các hàm helpers ---
   // ... (giữ nguyên logic)
-  const handleIncrease = () => setQuantity((prev) => prev + 1);
+  const handleIncrease = () => {
+    if (selectedVariant && quantity >= selectedVariant.stock) {
+      toast.warning(`Chỉ còn ${selectedVariant.stock} sản phẩm trong kho!`);
+      return;
+    }
+    setQuantity((prev) => prev + 1);
+  };
+
   const handleDecrease = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
   const formatPrice = (price) =>
     new Intl.NumberFormat("vi-VN", {
@@ -209,6 +217,11 @@ const DetailProduct = () => {
       toast.error("Sản phẩm không hợp lệ hoặc đã hết hàng.");
       return null; // Thất bại
     }
+    if (quantity > selectedVariant.stock) {
+      toast.error(`Chỉ còn ${selectedVariant.stock} sản phẩm trong kho!`);
+      return null;
+    }
+
     // 3. Gọi API
     try {
       const res = await addToCartApi(selectedVariant.id, quantity);
@@ -222,6 +235,10 @@ const DetailProduct = () => {
   };
 
   const handleAddToCart = async () => {
+    if (user?.isActive === 0) {
+      toast.error("Tài khoản của bạn đã bị khóa, không thể đặt hàng");
+      return;
+    }
     const newCartData = await addItemToCart(); // Cập nhật
     if (newCartData) {
       // Cập nhật
@@ -230,6 +247,10 @@ const DetailProduct = () => {
   };
 
   const handleBuyNow = async () => {
+    if (user?.isActive === 0) {
+      toast.error("Tài khoản của bạn đã bị khóa, không thể đặt hàng");
+      return;
+    }
     // 1. Gọi hàm để thêm item vào giỏ hàng
     const newCartData = await addItemToCart();
     // 2. Kiểm tra xem newCartData (giỏ hàng mới) có hợp lệ không

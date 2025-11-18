@@ -216,13 +216,12 @@ export default function Dashboard() {
                 title="Doanh thu theo loại sản phẩm"
               />
               <CardContent>
-                <Box sx={{ height: 350 }}>
+                <Box sx={{ height: 350, width: 400 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueByCategory}>
+                    <BarChart margin={{ left: 50 }} data={revenueByCategory}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
 
-                      {/* --- SỬA GIAO DIỆN (SỐ 2) --- */}
                       <YAxis tickFormatter={formatAxis} />
                       {/* --- KẾT THÚC SỬA GIAO DIỆN --- */}
 
@@ -287,7 +286,7 @@ export default function Dashboard() {
 
           {/* --- Top khách hàng --- */}
           <Grid xs={12}>
-            <Card sx={{ boxShadow: 3, mt: 3 }}>
+            <Card sx={{ boxShadow: 3 }}>
               <CardHeader
                 avatar={<TrendingUpIcon color="secondary" />}
                 title="Top 5 khách hàng mua nhiều nhất"

@@ -1,4 +1,3 @@
-// --- Import ---
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,9 +27,8 @@ const Order = () => {
 
   const [user, setUser] = useState(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState(0); // 🆕 THÊM PHƯƠNG THỨC THANH TOÁN
+  const [paymentMethod, setPaymentMethod] = useState(0);
 
-  // Chỉ chạy kiểm tra 1 lần
   const hasCheckedOnMount = useRef(false);
 
   // --- Lấy user ---
@@ -78,6 +76,12 @@ const Order = () => {
       return;
     }
 
+    // 🔹 Kiểm tra user bị khóa
+    if (user?.isActive === 0) {
+      toast.error("Tài khoản của bạn đã bị khóa, không thể đặt hàng");
+      return;
+    }
+
     try {
       const orderItemsDto = selectedForOrder.map((item) => ({
         productVariantId: item.productVariant.id,
@@ -86,7 +90,7 @@ const Order = () => {
 
       await addOrder({
         items: orderItemsDto,
-        paymentMethod: paymentMethod, // 🆕 GỬI PHƯƠNG THỨC THANH TOÁN CHO BACKEND
+        paymentMethod: paymentMethod,
       });
 
       const selectedCartItemIds = selectedForOrder.map((item) => item.id);
@@ -100,11 +104,20 @@ const Order = () => {
       dispatch(removeSelectedItems(selectedCartItemIds));
 
       toast.success("Đặt hàng thành công! ❤️");
-
       dispatch(clearSelectedForOrder());
       navigate("/purchase-history");
     } catch (err) {
       console.error("Lỗi đặt hàng:", err);
+
+      // Nếu backend trả lỗi 403
+      if (err.response?.status === 403) {
+        toast.error(
+          err.response.data.message ||
+            "Tài khoản đã bị khóa, không thể đặt hàng"
+        );
+        return;
+      }
+
       toast.error("Đặt hàng thất bại");
     }
   };
@@ -149,7 +162,6 @@ const Order = () => {
 
           {selectedForOrder.map((item) => {
             const variant = item.productVariant;
-
             const name = variant?.productColor?.product?.name || "Sản phẩm";
             const color = variant?.productColor?.color || "";
             const imageUrl = variant?.productColor?.imageUrls?.[0] || "";

@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from "react";
-// === THÊM 1: Import `useLocation` ===
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import OrderDetail from "./OrderDetail ";
 import useGetListMyOrder from "../../../hooks/useGetListMyOrder";
 import { updateStatus } from "../../../services/order";
 import { toast } from "react-toastify";
+import { io } from "socket.io-client";
+
+const BACKEND_URL = "http://localhost:3000";
 
 const LoadingComponent = () => (
   <div className="text-center py-20">Đang tải lịch sử mua hàng...</div>
@@ -27,19 +29,17 @@ const EmptyOrderHistory = () => (
 );
 
 const PurchaseHistory = () => {
-  // === THÊM 2: Lấy `location` để đọc state ===
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // === SỬA 3: Đặt tab active dựa trên state, nếu không có thì mặc định "PENDING" ===
   const [activeTab, setActiveTab] = useState(
     location.state?.defaultTab || "PENDING"
   );
-
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const BACKEND_URL = "http://localhost:3000";
-  const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
+  const { data, isLoading, handleGetList } = useGetListMyOrder();
 
-  const { data: orders, isLoading, handleGetList } = useGetListMyOrder();
+  const socketRef = useRef(null);
 
   const tabs = [
     { id: "PENDING", label: "Đang chờ xử lý" },
@@ -61,13 +61,35 @@ const PurchaseHistory = () => {
       year: "numeric",
     });
 
+  // --- Socket.IO real-time update ---
+  useEffect(() => {
+    socketRef.current = io(BACKEND_URL);
+
+    socketRef.current.on("order-status-updated", (updatedOrder) => {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === updatedOrder.id ? { ...o, status: updatedOrder.status } : o
+        )
+      );
+    });
+
+    return () => socketRef.current.disconnect();
+  }, []);
+
+  // --- Sync orders from hook ---
+  useEffect(() => {
+    if (data) setOrders(data);
+  }, [data]);
+
   const handleCancelOrder = async (orderId) => {
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?"))
       return;
     try {
       await updateStatus(orderId, "CANCELLED");
       toast.success("Đã hủy đơn hàng thành công.");
-      if (handleGetList) handleGetList();
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: "CANCELLED" } : o))
+      );
     } catch (error) {
       console.error("Lỗi khi hủy đơn hàng:", error);
       toast.error("Hủy đơn hàng thất bại. Vui lòng thử lại.");
@@ -75,10 +97,7 @@ const PurchaseHistory = () => {
   };
 
   const handleReview = (order) => {
-    // === SỬA 4: (Sửa lỗi) Chuyển từ `orders.id` (sai) sang `order.id` (đúng) ===
-    navigate(`/review/${order.id}`, {
-      state: { order: order },
-    });
+    navigate(`/review/${order.id}`, { state: { order } });
   };
 
   const filteredOrders = useMemo(() => {

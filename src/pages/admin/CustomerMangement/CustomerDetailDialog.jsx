@@ -54,22 +54,6 @@ export default function CustomerDetailDialog({ user, open, onClose }) {
             {user.isActive ? "Đang hoạt động" : "Đã bị khóa"}
           </span>
         </Typography>
-        <Divider sx={{ my: 2 }} />
-        <Typography variant="h6">Lịch sử đơn hàng</Typography>
-
-        {/* SỬA LẠI: Thêm check an toàn "user.orderHistory &&" */}
-        {user.orderHistory && user.orderHistory.length > 0 ? (
-          user.orderHistory.map((order) => (
-            <div key={order.id} style={{ marginTop: "10px" }}>
-              <Typography>
-                - Mã đơn: {order.id} ({dayjs(order.date).format("DD/MM/YYYY")})
-                - Tổng tiền: {order.total.toLocaleString()}₫
-              </Typography>
-            </div>
-          ))
-        ) : (
-          <Typography>Chưa có đơn hàng nào.</Typography>
-        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Đóng</Button>

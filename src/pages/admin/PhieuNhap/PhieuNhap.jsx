@@ -38,6 +38,7 @@ const PhieuNhap = () => {
   const [openDetail, setOpenDetail] = useState(false); // <-- mở dialog chi tiết
 
   const { data: supplierData = [] } = useGetListSupplier();
+  console.log("supplier", supplierData);
   const {
     data,
     total = 0,

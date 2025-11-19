@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   Divider,
@@ -10,121 +10,179 @@ import {
   TableRow,
   Typography,
   Paper,
-  CircularProgress, // Thêm loading
+  Tabs, // Thêm Tabs
+  Tab, // Thêm Tab
 } from "@mui/material";
 import dayjs from "dayjs";
-import { toast } from "react-toastify"; // Thêm toast
-
-// --- SỬA 1: Import đúng Dialog và Service ---
+import { toast } from "react-toastify";
 import SupplierDialog from "./DialogSupplier";
-import { deleteSupplier } from "../../../services/supplier";
-import useGetListSupplier from "../../../hooks/useGetListSupplier";
+// Import service trực tiếp, bỏ hook cũ
+import {
+  getAllSuppliers,
+  getTrashSuppliers,
+  deleteSupplier,
+  restoreSupplier,
+} from "../../../services/supplier";
 
 export default function SupplierManagement() {
-  const { data, handleGetList, isLoading } = useGetListSupplier();
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentTab, setCurrentTab] = useState(0); // 0: List, 1: Trash
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // --- SỬA 2: Đổi tên state cho rõ ràng ---
   const [detailSupplier, setDetailSupplier] = useState(null);
 
+  // Hàm load dữ liệu
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      let res;
+      if (currentTab === 0) {
+        res = await getAllSuppliers();
+      } else {
+        res = await getTrashSuppliers();
+      }
+      setData(res || []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi tải danh sách nhà cung cấp");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [currentTab]);
+
   const handleOpenDialog = (supplier = null) => {
-    // --- SỬA 3: Cập nhật state ---
     setDetailSupplier(supplier);
     setIsDialogOpen(true);
   };
 
+  // --- XỬ LÝ XÓA (ĐƯA VÀO THÙNG RÁC) ---
   const handleRemove = async (id) => {
-    // --- SỬA 4: Thêm xác nhận trước khi xóa ---
-    if (!window.confirm("Bạn có chắc chắn muốn xóa nhà cung cấp này không?")) {
+    if (
+      !window.confirm(
+        "Bạn có chắc chắn muốn chuyển nhà cung cấp này vào thùng rác?"
+      )
+    ) {
       return;
     }
-
     try {
-      // --- SỬA 5: Gọi đúng API và thêm toast ---
-      await deleteSupplier(id);
-      toast.success("Đã xóa nhà cung cấp thành công!");
-      handleGetList(); // Tải lại danh sách
+      const res = await deleteSupplier(id);
+      if (res.status === 200 || res.status === 204) {
+        toast.success("Đã chuyển vào thùng rác thành công!");
+        fetchData();
+      }
     } catch (err) {
       console.error(err);
-      toast.error(
-        err.response?.data?.message || "Xóa thất bại. Vui lòng thử lại."
-      );
+      toast.error("Xóa thất bại. Vui lòng thử lại.");
+    }
+  };
+
+  // --- XỬ LÝ KHÔI PHỤC ---
+  const handleRestore = async (id) => {
+    try {
+      const res = await restoreSupplier(id);
+      if (res.status === 200) {
+        toast.success("Khôi phục thành công! 🎉");
+        fetchData(); // Load lại danh sách thùng rác
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi khi khôi phục.");
     }
   };
 
   return (
     <div>
-      {/* --- SỬA 6: Cập nhật Tiêu đề --- */}
       <Typography variant="h6" gutterBottom>
         Quản lý nhà cung cấp
       </Typography>
 
-      <div className="flex justify-end gap-3 pb-4">
-        {/* --- SỬA 7: Cập nhật nút Thêm --- */}
-        <Button variant="contained" onClick={() => handleOpenDialog()}>
-          Thêm nhà cung cấp
-        </Button>
+      <div className="flex justify-between items-center pb-4">
+        {/* TAB CHUYỂN ĐỔI */}
+        <Tabs value={currentTab} onChange={(e, val) => setCurrentTab(val)}>
+          <Tab label="Danh sách hiện có" />
+          <Tab label="Thùng rác" />
+        </Tabs>
+
+        {/* Chỉ hiện nút Thêm khi ở Tab 0 */}
+        {currentTab === 0 && (
+          <Button variant="contained" onClick={() => handleOpenDialog()}>
+            Thêm nhà cung cấp
+          </Button>
+        )}
       </div>
 
       <Divider />
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ marginTop: 2 }}>
         <Table>
           <TableHead>
-            {/* --- SỬA 8: Cập nhật các cột --- */}
             <TableRow>
               <TableCell>Tên nhà cung cấp</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Số điện thoại</TableCell>
-              <TableCell>Ngày tạo</TableCell>
+              <TableCell>
+                {currentTab === 0 ? "Ngày tạo" : "Ngày xóa"}
+              </TableCell>
               <TableCell align="center">Hành động</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {isLoading ? (
-              // Thêm trạng thái Loading
-              <TableRow>
-                <TableCell colSpan={5} align="center">
-                  <CircularProgress />
-                  <Typography>Đang tải dữ liệu...</Typography>
-                </TableCell>
-              </TableRow>
-            ) : data.length > 0 ? (
-              // --- SỬA 9: Đổi tên biến lặp và hiển thị dữ liệu ---
+            {data.length > 0 ? (
               data.map((supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell>{supplier.name}</TableCell>
                   <TableCell>{supplier.email || "N/A"}</TableCell>
                   <TableCell>{supplier.phone}</TableCell>
                   <TableCell>
-                    {dayjs(supplier.createdAt).format("DD/MM/YYYY")}
+                    {dayjs(
+                      currentTab === 0 ? supplier.createdAt : supplier.deletedAt
+                    ).format("DD/MM/YYYY")}
                   </TableCell>
                   <TableCell align="center">
                     <div className="flex gap-2 justify-center">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleOpenDialog(supplier)} // Sửa
-                      >
-                        Sửa
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        onClick={() => handleRemove(supplier.id)} // Xóa
-                      >
-                        Xóa
-                      </Button>
+                      {currentTab === 0 ? (
+                        // === TAB LIST ===
+                        <>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleOpenDialog(supplier)}
+                          >
+                            Sửa
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleRemove(supplier.id)}
+                          >
+                            Xóa
+                          </Button>
+                        </>
+                      ) : (
+                        // === TAB TRASH ===
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          onClick={() => handleRestore(supplier.id)}
+                        >
+                          Khôi phục
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
-              // Trạng thái không có dữ liệu
               <TableRow>
-                {/* --- SỬA 10: Cập nhật colSpan và text --- */}
                 <TableCell colSpan={5} align="center">
-                  Không tìm thấy nhà cung cấp nào
+                  {isLoading ? "Đang tải..." : "Không có dữ liệu"}
                 </TableCell>
               </TableRow>
             )}
@@ -132,11 +190,10 @@ export default function SupplierManagement() {
         </Table>
       </TableContainer>
 
-      {/* --- SỬA 11: Gọi đúng Dialog và truyền đúng prop --- */}
       <SupplierDialog
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        onSuccess={() => handleGetList()}
+        onSuccess={() => fetchData()}
         detailSupplier={detailSupplier}
       />
     </div>

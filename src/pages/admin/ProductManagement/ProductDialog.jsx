@@ -1,5 +1,3 @@
-// ProductDialog.jsx
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -8,13 +6,11 @@ import {
   DialogActions,
   Button,
   TextField,
-  IconButton,
   MenuItem,
-  Box,
-  Typography,
+  IconButton,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { toast } from "react-toastify"; // Import Toast
 
 import {
   createProduct,
@@ -35,11 +31,11 @@ export default function ProductDialog({
     categoryId: "",
     brandId: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: brands = [] } = useGetListBrand();
   const { data: categories = [] } = useGetListCategory();
 
-  // Biến boolean để kiểm tra xem có phải đang "Sửa" hay không
   const isEditing = !!(detailProduct && detailProduct.id);
 
   const handleClose = () => {
@@ -50,6 +46,7 @@ export default function ProductDialog({
       categoryId: "",
       brandId: "",
     });
+    setIsSubmitting(false);
   };
 
   const handleChange = (e) => {
@@ -58,42 +55,54 @@ export default function ProductDialog({
   };
 
   const handleSave = async () => {
+    setIsSubmitting(true);
     try {
-      let res;
       if (isEditing) {
-        // Chỉ cập nhật tên và mô tả nếu đang "Sửa"
-        // (API của bạn cần hỗ trợ việc này,
-        // nếu không bạn cần gửi cả categoryId và brandId)
-        const payload = {
-          name: formProduct.name,
-          description: formProduct.description,
-        };
-        // Nếu API yêu cầu full, hãy dùng:
-        // const payload = formProduct;
-        res = await updateProduct(detailProduct.id, payload);
+        // Sửa
+        await updateProduct(detailProduct.id, formProduct);
+        toast.success("Cập nhật sản phẩm thành công!");
       } else {
-        // Thêm mới với đầy đủ thông tin
-        res = await createProduct(formProduct);
+        // Thêm
+        await createProduct(formProduct);
+        toast.success("Thêm sản phẩm mới thành công!");
       }
-
-      if (res) {
-        onSuccess(); // reload danh sách + đóng dialog
-      }
+      onSuccess();
+      handleClose();
     } catch (error) {
-      console.error("Lỗi khi lưu sản phẩm:", error);
+      console.error(error);
+
+      // --- BẮT LỖI TỪ BACKEND ---
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        const msg = Array.isArray(error.response.data.message)
+          ? error.response.data.message[0]
+          : error.response.data.message;
+
+        // Lỗi 400: Thường là trùng tên hoặc đã có trong thùng rác
+        if (error.response.status === 400) {
+          toast.warning(msg);
+        } else {
+          toast.error(msg);
+        }
+      } else {
+        toast.error("Có lỗi xảy ra khi lưu sản phẩm.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
     if (detailProduct && open) {
-      const catId = detailProduct.categoryId || detailProduct.category?.id;
-      const brdId = detailProduct.brandId || detailProduct.brand?.id;
-
       setFormProduct({
         name: detailProduct.name || "",
         description: detailProduct.description || "",
-        categoryId: catId ? String(catId) : "",
-        brandId: brdId ? String(brdId) : "",
+        categoryId:
+          detailProduct.category?.id || detailProduct.categoryId || "",
+        brandId: detailProduct.brand?.id || detailProduct.brandId || "",
       });
     } else {
       setFormProduct({
@@ -106,13 +115,14 @@ export default function ProductDialog({
   }, [detailProduct, open]);
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {isEditing ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+        {isEditing ? "Cập nhật sản phẩm" : "Thêm sản phẩm mới"}
         <IconButton
           aria-label="close"
           onClick={handleClose}
           sx={{ position: "absolute", right: 8, top: 8 }}
+          disabled={isSubmitting}
         >
           <CloseIcon />
         </IconButton>
@@ -126,10 +136,9 @@ export default function ProductDialog({
             onChange={handleChange}
             fullWidth
             required
-            autoFocus
+            disabled={isSubmitting}
           />
 
-          {/* 👇 ================ THÊM disabled VÀO ĐÂY ================ 👇 */}
           <TextField
             label="Danh mục"
             name="categoryId"
@@ -137,7 +146,7 @@ export default function ProductDialog({
             onChange={handleChange}
             select
             fullWidth
-            disabled={isEditing} // 👈 KHÓA KHI CHỈNH SỬA
+            // disabled={isEditing} // Bạn có thể mở lại nếu muốn cho phép sửa danh mục
           >
             {categories.map((item) => (
               <MenuItem key={item.id} value={item.id}>
@@ -146,7 +155,6 @@ export default function ProductDialog({
             ))}
           </TextField>
 
-          {/* 👇 ================ THÊM disabled VÀO ĐÂY ================ 👇 */}
           <TextField
             label="Thương hiệu"
             name="brandId"
@@ -154,7 +162,7 @@ export default function ProductDialog({
             onChange={handleChange}
             select
             fullWidth
-            disabled={isEditing} // 👈 KHÓA KHI CHỈNH SỬA
+            // disabled={isEditing} // Bạn có thể mở lại nếu muốn cho phép sửa thương hiệu
           >
             {brands.map((item) => (
               <MenuItem key={item.id} value={item.id}>
@@ -171,17 +179,20 @@ export default function ProductDialog({
             fullWidth
             multiline
             rows={3}
+            disabled={isSubmitting}
           />
         </div>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Hủy</Button>
+        <Button onClick={handleClose} disabled={isSubmitting}>
+          Hủy
+        </Button>
         <Button
           onClick={handleSave}
           variant="contained"
-          disabled={!formProduct.name}
+          disabled={!formProduct.name || isSubmitting}
         >
-          Lưu
+          {isSubmitting ? "Đang lưu..." : "Lưu"}
         </Button>
       </DialogActions>
     </Dialog>

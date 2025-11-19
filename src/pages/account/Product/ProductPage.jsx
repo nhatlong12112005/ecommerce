@@ -90,6 +90,7 @@ const ProductPage = () => {
   // Lấy tên danh mục
   const { data: categoryInfo, isLoading: isCategoryLoading } =
     useGetCategoryById(categoryId);
+  console.log(categoryInfo);
   const BACKEND_URL = "http://localhost:3000";
 
   // Lấy sản phẩm (Logic này không cần thay đổi)

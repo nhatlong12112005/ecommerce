@@ -13,7 +13,7 @@ const useGetListSupplier = () => {
       console.log(res);
 
       // SỬA LẠI Ở ĐÂY: Dùng 'res' trực tiếp
-      setData(res.data || []);
+      setData(res || []);
     } catch (err) {
       console.error("Error fetching category list", err);
     } finally {

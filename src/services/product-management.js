@@ -15,6 +15,15 @@ export const getProductById = (id) => {
 export const createProduct = (productData) => {
   return axiosClient.post("/products", productData);
 };
+export const getTrashProducts = async () => {
+  const res = await axiosClient.get("/products/trash");
+  return res.data; // Backend trả về mảng []
+};
+
+// 3. Khôi phục sản phẩm (MỚI)
+export const restoreProduct = (id) => {
+  return axiosClient.patch(`/products/${id}/restore`);
+};
 
 export const updateProduct = (id, updateData) => {
   return axiosClient.patch(`/products/${id}`, updateData);
@@ -32,9 +41,7 @@ export const deleteProduct = (id) => {
 
  */
 export const createColor = (data) => {
-  return axiosClient.post("/product-color", data, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  return axiosClient.post("/product-color", data);
 };
 
 /**
@@ -53,7 +60,15 @@ export const uploadColorImages = (colorGroupId, formData) => {
     }
   );
 };
+export const getTrashColorGroups = async () => {
+  const res = await axiosClient.get("/product-color/trash");
+  return res.data;
+};
 
+// 2. Khôi phục nhóm màu (MỚI)
+export const restoreColorGroup = (id) => {
+  return axiosClient.patch(`/product-color/${id}/restore`);
+};
 export const updateColorGroup = (id, updateData) => {
   return axiosClient.patch(`/product-color/${id}`, updateData);
 };

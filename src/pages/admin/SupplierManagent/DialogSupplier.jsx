@@ -7,13 +7,12 @@ import {
   Button,
   TextField,
   IconButton,
-  Stack, // Thêm Stack để xếp layout
+  Stack,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { createSupplier, updateSupplier } from "../../../services/supplier";
-import { toast } from "react-toastify"; // Thêm toast để thông báo
+import { toast } from "react-toastify";
 
-// Trạng thái khởi tạo cho form
 const initialState = {
   name: "",
   email: "",
@@ -24,13 +23,15 @@ export default function SupplierDialog({
   open,
   onClose,
   onSuccess,
-  detailSupplier, // <-- SỬA: Đổi tên prop từ `detailCategory` sang `detailSupplier`
+  detailSupplier,
 }) {
   const [formSupplier, setFormSupplier] = useState(initialState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleClose = () => {
     onClose();
-    setFormSupplier(initialState); // <-- SỬA: Reset tất cả các trường
+    setFormSupplier(initialState);
+    setIsSubmitting(false);
   };
 
   const handleChange = (e) => {
@@ -39,45 +40,55 @@ export default function SupplierDialog({
   };
 
   const handleSave = async () => {
+    setIsSubmitting(true);
     try {
       if (detailSupplier && detailSupplier.id) {
-        // --- Chế độ CẬP NHẬT ---
+        // --- CẬP NHẬT ---
         await updateSupplier(detailSupplier.id, formSupplier);
         toast.success("Cập nhật nhà cung cấp thành công!");
       } else {
-        // --- Chế độ THÊM MỚI ---
+        // --- THÊM MỚI ---
         await createSupplier(formSupplier);
         toast.success("Thêm nhà cung cấp thành công!");
       }
-      onSuccess(); // Gọi lại hàm onSuccess để tải lại dữ liệu
-      handleClose(); // Đóng dialog
+      onSuccess();
+      handleClose();
     } catch (err) {
       console.error(err);
-      // Hiển thị lỗi từ server (nếu có)
-      const errorMessage =
-        err.response?.data?.message || "Đã xảy ra lỗi, vui lòng thử lại.";
-      toast.error(errorMessage);
+
+      // --- BẮT LỖI TỪ BACKEND (QUAN TRỌNG) ---
+      if (err.response && err.response.data && err.response.data.message) {
+        const msg = Array.isArray(err.response.data.message)
+          ? err.response.data.message[0]
+          : err.response.data.message;
+
+        if (err.response.status === 400) {
+          toast.warning(msg); // Lỗi trùng tên/thùng rác dùng warning
+        } else {
+          toast.error(msg);
+        }
+      } else {
+        toast.error("Đã xảy ra lỗi, vui lòng thử lại.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // SỬA: Cập nhật useEffect để điền TẤT CẢ dữ liệu khi ở chế độ "Sửa"
   useEffect(() => {
     if (detailSupplier && open) {
-      // Chế độ Sửa: Lấy dữ liệu từ prop
       setFormSupplier({
         name: detailSupplier.name || "",
         email: detailSupplier.email || "",
         phone: detailSupplier.phone || "",
       });
     } else {
-      // Chế độ Thêm: Reset về trạng thái rỗng
       setFormSupplier(initialState);
     }
-  }, [detailSupplier, open]); // <-- SỬA: phụ thuộc vào `detailSupplier`
+  }, [detailSupplier, open]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      {/* SỬA: Tiêu đề */}
       <DialogTitle>
         {detailSupplier && detailSupplier.id
           ? "Sửa nhà cung cấp"
@@ -86,12 +97,12 @@ export default function SupplierDialog({
           aria-label="close"
           onClick={handleClose}
           sx={{ position: "absolute", right: 8, top: 8 }}
+          disabled={isSubmitting}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
-      {/* SỬA: Thêm các trường email và phone */}
       <DialogContent dividers>
         <Stack spacing={2} sx={{ paddingTop: "8px" }}>
           <TextField
@@ -101,15 +112,17 @@ export default function SupplierDialog({
             onChange={handleChange}
             fullWidth
             required
-            autoFocus // Tự động focus vào trường này
+            autoFocus
+            disabled={isSubmitting}
           />
           <TextField
             label="Email"
             name="email"
-            type="email" // Đặt type là email để có validation cơ bản
+            type="email"
             value={formSupplier.email}
             onChange={handleChange}
             fullWidth
+            disabled={isSubmitting}
           />
           <TextField
             label="Số điện thoại"
@@ -118,19 +131,21 @@ export default function SupplierDialog({
             onChange={handleChange}
             fullWidth
             required
+            disabled={isSubmitting}
           />
         </Stack>
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={handleClose}>Hủy</Button>
+        <Button onClick={handleClose} disabled={isSubmitting}>
+          Hủy
+        </Button>
         <Button
           onClick={handleSave}
           variant="contained"
-          // SỬA: Thêm validation cơ bản (yêu cầu Tên và SĐT)
-          disabled={!formSupplier.name || !formSupplier.phone}
+          disabled={!formSupplier.name || !formSupplier.phone || isSubmitting}
         >
-          Lưu
+          {isSubmitting ? "Đang lưu..." : "Lưu"}
         </Button>
       </DialogActions>
     </Dialog>

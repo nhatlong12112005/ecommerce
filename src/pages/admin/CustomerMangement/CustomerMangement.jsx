@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   Divider,
@@ -14,187 +14,199 @@ import {
   Typography,
   Paper,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  CircularProgress,
+  Tabs, // Thêm Tabs
+  Tab, // Thêm Tab
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
+import DeleteIcon from "@mui/icons-material/Delete";
+import RestoreIcon from "@mui/icons-material/Restore"; // Icon khôi phục
+import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 
 import CustomerDetailDialog from "./CustomerDetailDialog";
-import useGetListCustomer from "../../../hooks/useGetListCustomer";
+// Import service trực tiếp
 import {
+  fetchDataCustomer,
+  getTrashCustomers,
   updateCustomerStatus,
   deleteCustomer,
+  restoreCustomer,
 } from "../../../services/customer-managment";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-toastify";
 import useDebounce from "../../../hooks/useDebounce";
 
 const LIMIT_RECORD_PER_PAGE = 10;
 
-const ConfirmationDialog = ({ open, onClose, onConfirm, title, content }) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>{title}</DialogTitle>
-    <DialogContent>
-      <DialogContentText>{content}</DialogContentText>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={onClose} color="inherit">
-        Hủy
-      </Button>
-      <Button onClick={onConfirm} color="error" autoFocus>
-        Xác nhận
-      </Button>
-    </DialogActions>
-  </Dialog>
-);
-
 export default function CustomerManagement() {
+  // --- State Dữ liệu ---
+  const [users, setUsers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // --- State Bộ lọc & Tab ---
+  const [currentTab, setCurrentTab] = useState(0); // 0: List, 1: Trash
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState(-1); // Phần lọc này ĐÃ ĐÚNG
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(-1); // -1: Tất cả, 1: Active, 0: Inactive
+
+  // --- State Dialog ---
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [refetchTrigger, setRefetchTrigger] = useState(0);
-  const [processingId, setProcessingId] = useState(null);
-  const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    title: "",
-    content: "",
-    onConfirm: () => {},
-  });
 
   const debouncedSearch = useDebounce(search, 500);
 
-  const { data, total, isLoading } = useGetListCustomer({
-    page,
-    limit: LIMIT_RECORD_PER_PAGE,
-    search: debouncedSearch,
-    status, // Truyền số -1, 0, hoặc 1 (Đã đúng)
-    refetchTrigger,
-  });
+  // === HÀM TẢI DỮ LIỆU ===
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      if (currentTab === 0) {
+        // --- TAB DANH SÁCH ---
+        const params = {
+          page,
+          limit: LIMIT_RECORD_PER_PAGE,
+          search: debouncedSearch,
+          // Nếu statusFilter khác -1 thì gửi lên (0 hoặc 1)
+          ...(statusFilter !== -1 && { isActive: statusFilter }),
+        };
+        const res = await fetchDataCustomer(params);
+        setUsers(res.data || []);
+        setTotal(res.totalItems || 0);
+      } else {
+        // --- TAB THÙNG RÁC ---
+        const res = await getTrashCustomers();
+        // Backend trả về mảng, chưa phân trang nên ta giả lập
+        setUsers(res || []);
+        setTotal(res.length || 0);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi tải danh sách tài khoản");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleChangePage = (event, value) => setPage(value);
+  // Gọi lại khi thay đổi filter/tab
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter, currentTab]);
 
-  const handleOpenDetail = (user) => {
+  // Reset trang khi đổi Tab
+  const handleChangeTab = (e, newVal) => {
+    setCurrentTab(newVal);
+    setPage(1);
+    setStatusFilter(-1); // Reset bộ lọc trạng thái
+  };
+
+  // === CÁC HÀNH ĐỘNG ===
+
+  // 1. Xem chi tiết
+  const handleViewDetail = (user) => {
     setSelectedUser(user);
     setIsDetailOpen(true);
   };
-  const handleCloseDetail = () => {
-    setIsDetailOpen(false);
-    setSelectedUser(null);
-  };
-  const handleRefetch = () => setRefetchTrigger((prev) => prev + 1);
 
-  const handleCloseConfirm = () =>
-    setConfirmDialog({
-      isOpen: false,
-      title: "",
-      content: "",
-      onConfirm: () => {},
-    });
-
-  // === BẮT ĐẦU SỬA LỖI ===
-  const handleToggleLock = async (user) => {
-    setProcessingId(user.id);
-    handleCloseConfirm();
-
-    // 1. Lấy trạng thái boolean MỚI (true = active, false = locked)
-    const newBooleanStatus = !user.isActive;
-
-    // 2. Chuyển đổi boolean (true/false) sang SỐ (1/0)
-    //    mà API backend (UpdateUserStatusDto) đang mong đợi
-    const newNumericStatus = newBooleanStatus ? 1 : 0; // vd: 1 nếu newBooleanStatus là true
-
+  // 2. Xóa mềm (Đưa vào thùng rác)
+  const handleDelete = async (id) => {
+    if (
+      !window.confirm(
+        "Bạn có chắc chắn muốn chuyển tài khoản này vào thùng rác?"
+      )
+    )
+      return;
     try {
-      // 3. Gửi đi ĐÚNG ĐỊNH DẠNG object mà DTO yêu cầu
-      //    (Giả sử service `updateCustomerStatus` sẽ gửi object này làm body)
-      await updateCustomerStatus(user.id, { isActive: newNumericStatus });
-
-      toast.success(
-        // Dùng newBooleanStatus cho tin nhắn toast thì rõ nghĩa hơn
-        `Đã ${newBooleanStatus ? "mở khóa" : "khóa"} tài khoản ${user.name}`
-      );
-      handleRefetch(); // Bây giờ sẽ chạy thành công
-    } catch (err) {
-      console.error("Error updating status", err);
-      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
-    } finally {
-      setProcessingId(null);
-    }
-  };
-  // === KẾT THÚC SỬA LỖI ===
-
-  const handleDelete = async (user) => {
-    setProcessingId(user.id);
-    handleCloseConfirm();
-    try {
-      await deleteCustomer(user.id);
-      toast.success(`Đã xóa tài khoản ${user.name}`);
-      handleRefetch();
-    } catch (err) {
-      console.error("Error deleting user", err);
-      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
-    } finally {
-      setProcessingId(null);
+      const res = await deleteCustomer(id);
+      if (res.status === 200 || res.status === 204 || res.message) {
+        toast.success("Đã chuyển vào thùng rác thành công!");
+        fetchData();
+      }
+    } catch (error) {
+      toast.error("Xóa thất bại");
     }
   };
 
-  const openConfirmDialog = (user, actionType) => {
-    if (actionType === "toggleLock") {
-      setConfirmDialog({
-        isOpen: true,
-        title: user.isActive ? "Xác nhận Khóa" : "Xác nhận Mở Khóa",
-        content: `Bạn có chắc chắn muốn ${
-          user.isActive ? "khóa" : "mở khóa"
-        } tài khoản "${user.name}"?`,
-        onConfirm: () => handleToggleLock(user),
-      });
-    } else if (actionType === "delete") {
-      setConfirmDialog({
-        isOpen: true,
-        title: "Xác nhận Xóa",
-        content: `Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản "${user.name}"? Hành động này không thể hoàn tác.`,
-        onConfirm: () => handleDelete(user),
-      });
+  // 3. Khôi phục (Từ thùng rác)
+  const handleRestore = async (id) => {
+    try {
+      await restoreCustomer(id);
+      toast.success("Khôi phục tài khoản thành công!");
+      fetchData();
+    } catch (error) {
+      toast.error("Lỗi khi khôi phục");
+    }
+  };
+
+  // 4. Khóa / Mở khóa (Cập nhật status)
+  const handleToggleStatus = async (user) => {
+    const newStatus = user.isActive === 1 ? 0 : 1; // Đảo ngược trạng thái
+    const actionName = newStatus === 1 ? "Mở khóa" : "Khóa";
+
+    if (!window.confirm(`Bạn có chắc muốn ${actionName} tài khoản này?`))
+      return;
+
+    try {
+      await updateCustomerStatus(user.id, newStatus);
+      toast.success(`Đã ${actionName} tài khoản thành công!`);
+      fetchData();
+    } catch (error) {
+      toast.error(`Lỗi khi ${actionName} tài khoản`);
     }
   };
 
   return (
     <div>
-      <Toaster position="top-right" reverseOrder={false} />
       <Typography variant="h6" gutterBottom>
-        Quản lý tài khoản khách hàng
+        Quản lý khách hàng
       </Typography>
 
-      <div className="flex flex-wrap justify-between gap-3 pb-4 items-center">
-        <div className="flex gap-3 flex-wrap items-center">
-          <TextField
-            label="Tìm theo tên hoặc email"
-            size="small"
-            style={{ minWidth: 250 }}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {/* Phần lọc này đã đúng */}
-          <TextField
-            label="Trạng thái"
-            select
-            size="small"
-            style={{ minWidth: 150 }}
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <MenuItem value={-1}>Tất cả</MenuItem>
-            <MenuItem value={1}>Hoạt động</MenuItem>
-            <MenuItem value={0}>Đã khóa</MenuItem>
-          </TextField>
-        </div>
+      {/* --- THANH CÔNG CỤ --- */}
+      <div className="flex flex-col gap-4 mb-4">
+        <Tabs value={currentTab} onChange={handleChangeTab}>
+          <Tab label="Danh sách tài khoản" />
+          <Tab label="Thùng rác (Đã xóa)" />
+        </Tabs>
+
+        {/* Bộ lọc chỉ hiện ở Tab Danh sách */}
+        {currentTab === 0 && (
+          <div className="flex gap-3 items-center bg-white p-2 rounded shadow-sm">
+            <TextField
+              label="Tìm kiếm (Tên, Email)..."
+              size="small"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: 300 }}
+            />
+
+            <TextField
+              select
+              label="Trạng thái"
+              size="small"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              sx={{ width: 200 }}
+            >
+              <MenuItem value={-1}>Tất cả</MenuItem>
+              <MenuItem value={1}>Hoạt động</MenuItem>
+              <MenuItem value={0}>Đã khóa</MenuItem>
+            </TextField>
+          </div>
+        )}
       </div>
 
-      <Divider />
+      <Divider sx={{ mb: 2 }} />
 
+      {/* --- BẢNG DỮ LIỆU --- */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -202,62 +214,88 @@ export default function CustomerManagement() {
               <TableCell>Tên khách hàng</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Số điện thoại</TableCell>
-              <TableCell>Trạng thái</TableCell>
+              {currentTab === 0 && (
+                <TableCell align="center">Trạng thái</TableCell>
+              )}
               <TableCell align="center">Hành động</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {!isLoading && data.length > 0 ? (
-              data.map((user) => (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center">
+                  Đang tải...
+                </TableCell>
+              </TableRow>
+            ) : users.length > 0 ? (
+              users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.phone}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={user.isActive ? "Hoạt động" : "Đã khóa"}
-                      color={user.isActive ? "success" : "error"}
-                      size="small"
-                    />
-                  </TableCell>
+
+                  {/* Cột Trạng thái (Chỉ hiện ở Tab Danh sách) */}
+                  {currentTab === 0 && (
+                    <TableCell align="center">
+                      <Chip
+                        label={user.isActive === 1 ? "Active" : "Locked"}
+                        color={user.isActive === 1 ? "success" : "error"}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                  )}
+
                   <TableCell align="center">
-                    <div className="flex gap-2 justify-center">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleOpenDetail(user)}
-                        disabled={!!processingId}
+                    <div className="flex gap-1 justify-center">
+                      {/* Nút Xem chi tiết (Chung cho cả 2 tab) */}
+                      <IconButton
+                        color="info"
+                        onClick={() => handleViewDetail(user)}
+                        title="Xem chi tiết"
                       >
-                        Xem
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color={user.isActive ? "warning" : "success"}
-                        onClick={() => openConfirmDialog(user, "toggleLock")}
-                        disabled={!!processingId}
-                      >
-                        {processingId === user.id ? (
-                          <CircularProgress size={20} />
-                        ) : user.isActive ? (
-                          "Khóa"
-                        ) : (
-                          "Mở"
-                        )}
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        onClick={() => openConfirmDialog(user, "delete")}
-                        disabled={!!processingId}
-                      >
-                        {processingId === user.id ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          "Xóa"
-                        )}
-                      </Button>
+                        <RemoveRedEyeIcon />
+                      </IconButton>
+
+                      {currentTab === 0 ? (
+                        // === TAB DANH SÁCH ===
+                        <>
+                          {/* Nút Khóa/Mở khóa */}
+                          <IconButton
+                            color={user.isActive === 1 ? "warning" : "success"}
+                            onClick={() => handleToggleStatus(user)}
+                            title={
+                              user.isActive === 1 ? "Khóa tài khoản" : "Mở khóa"
+                            }
+                          >
+                            {user.isActive === 1 ? (
+                              <LockIcon />
+                            ) : (
+                              <LockOpenIcon />
+                            )}
+                          </IconButton>
+
+                          {/* Nút Xóa mềm */}
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDelete(user.id)}
+                            title="Chuyển vào thùng rác"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      ) : (
+                        // === TAB THÙNG RÁC ===
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          startIcon={<RestoreIcon />}
+                          onClick={() => handleRestore(user.id)}
+                        >
+                          Khôi phục
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -265,7 +303,7 @@ export default function CustomerManagement() {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  {isLoading ? "Đang tải..." : "Không tìm thấy tài khoản nào"}
+                  Không tìm thấy tài khoản nào
                 </TableCell>
               </TableRow>
             )}
@@ -273,17 +311,14 @@ export default function CustomerManagement() {
         </Table>
       </TableContainer>
 
-      {data.length > 0 && total > 0 && (
-        <div className="flex justify-between items-center px-3 py-5">
-          <div className="text-sm">
-            Hiển thị {(page - 1) * LIMIT_RECORD_PER_PAGE + 1} -{" "}
-            {Math.min(page * LIMIT_RECORD_PER_PAGE, total)} trong tổng số{" "}
-            {total} tài khoản
-          </div>
+      {/* Phân trang (Chỉ hiện ở Tab Danh sách và có dữ liệu) */}
+      {users.length > 0 && currentTab === 0 && (
+        <div className="flex justify-end p-4">
           <Pagination
             page={page}
             count={Math.ceil(total / LIMIT_RECORD_PER_PAGE)}
-            onChange={handleChangePage}
+            onChange={(e, v) => setPage(v)}
+            color="primary"
           />
         </div>
       )}
@@ -291,15 +326,7 @@ export default function CustomerManagement() {
       <CustomerDetailDialog
         user={selectedUser}
         open={isDetailOpen}
-        onClose={handleCloseDetail}
-      />
-
-      <ConfirmationDialog
-        open={confirmDialog.isOpen}
-        onClose={handleCloseConfirm}
-        onConfirm={confirmDialog.onConfirm}
-        title={confirmDialog.title}
-        content={confirmDialog.content}
+        onClose={() => setIsDetailOpen(false)}
       />
     </div>
   );

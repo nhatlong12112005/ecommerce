@@ -16,7 +16,8 @@ const useGetCategoryById = (categoryId) => {
     try {
       setIsLoading(true);
       const res = await getCategoryById(categoryId); // Gọi API
-      setData(res.data?.data || res.data || null);
+
+      setData(res?.data || res || null);
     } catch (error) {
       console.log("lỗi lấy thông tin category", error);
       setData(null);

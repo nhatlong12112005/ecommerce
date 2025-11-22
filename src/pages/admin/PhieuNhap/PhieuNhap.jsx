@@ -142,7 +142,10 @@ const PhieuNhap = () => {
                     <TableCell>{item.supplier?.name}</TableCell>
                     <TableCell>{totalQuantity}</TableCell>
                     <TableCell>
-                      {item.totalImportCost.toLocaleString()} đ
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(item.totalImportCost)}
                     </TableCell>
                     <TableCell>
                       {dayjs(item.receiptDate).format("DD/MM/YYYY HH:mm")}

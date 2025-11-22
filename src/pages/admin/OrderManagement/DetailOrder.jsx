@@ -28,51 +28,53 @@ const statusOptions = [
   { value: "PENDING", label: "Chờ xử lý" },
   { value: "SHIPPED", label: "Đang Giao Hàng" },
   { value: "COMPLETED", label: "Hoàn thành" },
-  { value: "CANCELLED", label: "Đã hủy" }, // Vẫn giữ ở đây để tham chiếu
 ];
 
-// 1. 👈 THÊM: Định nghĩa "trọng số" cho quy trình
-// Đảm bảo không thể quay lại trạng thái có trọng số thấp hơn
 const statusWeights = {
   PENDING: 1,
   SHIPPED: 2,
   COMPLETED: 3,
-  CANCELLED: 4, // Trạng thái cuối
+  CANCELLED: 4,
 };
 
 export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [tempStatus, setTempStatus] = useState("");
 
   useEffect(() => {
     if (order) {
       setCurrentOrder({ ...order });
+      setTempStatus(order.status); // Load trạng thái tạm
     }
   }, [order, open]);
 
-  const handleFieldChange = (field, value) => {
-    setCurrentOrder((prev) => ({ ...prev, [field]: value }));
-  };
+  if (!currentOrder) return null;
 
+  // Lưu thay đổi trạng thái
   const handleSaveChanges = () => {
-    onUpdate(currentOrder);
+    onUpdate({
+      ...currentOrder,
+      status: tempStatus,
+    });
     onClose();
   };
 
+  // Chỉ cho hủy khi PENDING
   const handleCancelOrder = () => {
-    if (
-      window.confirm(
-        "Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác."
-      )
-    ) {
-      onUpdate({ ...currentOrder, status: "CANCELLED" });
+    if (currentOrder.status !== "PENDING") {
+      alert("Chỉ có thể hủy đơn hàng khi đang ở trạng thái CHỜ XỬ LÝ");
+      return;
+    }
+    if (window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
+      onUpdate({
+        ...currentOrder,
+        status: "CANCELLED",
+      });
       onClose();
     }
   };
 
-  if (!currentOrder) return null;
-
-  // 2. 👈 THÊM: Lấy trọng số của trạng thái HIỆN TẠI
-  const currentStatusWeight = statusWeights[currentOrder.status];
+  const currentWeight = statusWeights[currentOrder.status];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -86,9 +88,10 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
           <CloseIcon />
         </IconButton>
       </DialogTitle>
+
       <DialogContent dividers>
         <Grid container spacing={2}>
-          {/* (Thông tin khách hàng - Giữ nguyên) */}
+          {/* THÔNG TIN KHÁCH HÀNG */}
           <Grid item xs={12} md={6}>
             <Typography variant="h6" gutterBottom>
               Thông tin khách hàng
@@ -103,11 +106,11 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
               <b>Địa chỉ giao hàng:</b> {currentOrder.user?.address}
             </Typography>
             <Typography>
-              <b>Thanh toán: Tiền mặt</b>
+              <b>Thanh toán:</b> Tiền mặt
             </Typography>
           </Grid>
 
-          {/* (Cập nhật & Giao hàng - Giữ nguyên) */}
+          {/* CẬP NHẬT TRẠNG THÁI */}
           <Grid item xs={12} md={6}>
             <Typography variant="h6" gutterBottom>
               Cập nhật & Giao hàng
@@ -116,41 +119,29 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
               <b>Ngày đặt:</b>{" "}
               {dayjs(currentOrder.orderDate).format("DD/MM/YYYY HH:mm")}
             </Typography>
+
             <div className="flex flex-col gap-4 mt-2">
               <TextField
                 label="Trạng thái đơn hàng"
                 select
-                value={currentOrder.status}
-                onChange={(e) => handleFieldChange("status", e.target.value)}
-                // 3. 👈 SỬA: Vô hiệu hóa toàn bộ nếu là trạng thái cuối
+                value={tempStatus}
+                onChange={(e) => setTempStatus(e.target.value)}
                 disabled={
                   currentOrder.status === "CANCELLED" ||
                   currentOrder.status === "COMPLETED"
                 }
               >
-                {/* 4. 👈 SỬA: Cập nhật logic map */}
                 {statusOptions.map((option) => {
                   const optionWeight = statusWeights[option.value];
-
-                  // Logic vô hiệu hóa từng lựa chọn
-                  let isOptionDisabled = false;
-
-                  // A. Không cho quay lùi (ví dụ: SHIPPED (2) -> PENDING (1))
-                  if (optionWeight < currentStatusWeight) {
-                    isOptionDisabled = true;
-                  }
-
-                  // B. Không cho chọn "Đã hủy" từ dropdown (phải dùng nút)
-                  if (option.value === "CANCELLED") {
-                    isOptionDisabled = true;
-                  }
-
+                  // Disable option nếu trọng số thấp hơn trạng thái hiện tại
+                  const isDisabled =
+                    optionWeight < currentWeight ||
+                    option.value === "CANCELLED";
                   return (
                     <MenuItem
                       key={option.value}
                       value={option.value}
-                      // Áp dụng logic disable
-                      disabled={isOptionDisabled}
+                      disabled={isDisabled}
                     >
                       {option.label}
                     </MenuItem>
@@ -160,13 +151,11 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
             </div>
           </Grid>
 
-          {/* (Grid Divider - Giữ nguyên) */}
           <Grid item xs={12}>
-            {" "}
-            <Divider />{" "}
+            <Divider />
           </Grid>
 
-          {/* (Danh sách sản phẩm - Giữ nguyên) */}
+          {/* DANH SÁCH SẢN PHẨM */}
           <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
               Sản phẩm trong đơn hàng
@@ -176,30 +165,31 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
               const variant = item.productVariant;
               const color = variant?.productColor;
               const product = color?.product;
-              const productName = product?.name || "Sản phẩm không xác định";
-              const imageUrl = color?.imageUrls?.[0] || "/placeholder.jpg";
+              const name = product?.name || "Không xác định";
+              const image = color?.imageUrls?.[0] || "/placeholder.jpg";
 
               return (
                 <div key={item.id} className="flex items-center gap-4 py-2">
                   <img
-                    src={`${BACKEND_URL}${imageUrl}`}
-                    alt={productName}
+                    src={`${BACKEND_URL}${image}`}
+                    alt={name}
                     className="w-16 h-16 object-cover rounded border"
                   />
+
                   <div className="flex-1">
-                    <Typography className="font-medium">
-                      {productName}
-                    </Typography>
+                    <Typography className="font-medium">{name}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Số lượng: {item.quantity}
                     </Typography>
                   </div>
+
                   <Typography className="font-medium">
                     {formatPrice(item.price * item.quantity)}
                   </Typography>
                 </div>
               );
             })}
+
             <Divider />
             <div className="flex justify-between items-center mt-2">
               <Typography variant="h6">Tổng cộng</Typography>
@@ -211,24 +201,22 @@ export default function OrderDetailsDialog({ open, onClose, onUpdate, order }) {
         </Grid>
       </DialogContent>
 
-      {/* (Dialog Actions - Giữ nguyên) */}
+      {/* ACTION BUTTONS */}
       <DialogActions
         sx={{ justifyContent: "space-between", padding: "16px 24px" }}
       >
         <Button
-          onClick={handleCancelOrder}
           variant="outlined"
           color="error"
-          disabled={
-            currentOrder.status === "CANCELLED" ||
-            currentOrder.status === "COMPLETED"
-          }
+          onClick={handleCancelOrder}
+          disabled={currentOrder.status !== "PENDING"}
         >
           Hủy đơn hàng
         </Button>
+
         <div>
           <Button onClick={onClose}>Đóng</Button>
-          <Button onClick={handleSaveChanges} variant="contained">
+          <Button variant="contained" onClick={handleSaveChanges}>
             Lưu thay đổi
           </Button>
         </div>

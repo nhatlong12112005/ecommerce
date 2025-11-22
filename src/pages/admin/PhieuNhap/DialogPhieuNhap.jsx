@@ -440,7 +440,10 @@ const DialogPhieuNhap = ({ open, onClose, onSuccess }) => {
                           </Typography>
                           <Typography variant="caption" color="textSecondary">
                             Tồn kho: {item.productVariant.stock} | Giá bán:{" "}
-                            {item.productVariant.price}
+                            {new Intl.NumberFormat("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            }).format(item.productVariant.price)}
                           </Typography>
                         </TableCell>
 

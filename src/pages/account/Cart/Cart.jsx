@@ -1,10 +1,8 @@
 import React, { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-// Bỏ 'useState' vì không cần nữa
 import {
   setCart,
   setSelectedForOrder,
-  // --- SỬA 1: IMPORT CÁC ACTION MỚI ---
   toggleSelectItemInCart,
   setSelectAllInCart,
   removeItemFromSelection,
@@ -17,10 +15,7 @@ export default function Cart() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const cartItems = useSelector((state) => state.cart.items);
-
-  // --- SỬA 2: Đọc 'selectedItems' từ Redux thay vì useState ---
   const selectedItems = useSelector((state) => state.cart.selectedInCart);
-  // Bỏ: const [selectedItems, setSelectedItems] = useState([]);
 
   const BACKEND_URL = "http://localhost:3000";
 
@@ -30,10 +25,7 @@ export default function Cart() {
       if (res.status === 200) {
         dispatch(setCart(res.data));
         toast.success("Xóa thành công");
-
-        // --- SỬA 3: Dispatch action để xóa item khỏi 'selectedInCart' ---
         dispatch(removeItemFromSelection(itemId));
-        // Bỏ: setSelectedItems((prev) => prev.filter((id) => id !== itemId));
       }
     } catch {
       toast.error("Xóa thất bại");
@@ -41,11 +33,16 @@ export default function Cart() {
   };
 
   const handleQuantityChange = async (itemId, delta) => {
-    // ... (logic hàm này không thay đổi)
     const item = cartItems.find((i) => i.id === itemId);
     if (!item) return;
 
     const newQuantity = item.quantity + delta;
+    const stock = item.productVariant?.stock || 0;
+
+    if (newQuantity > stock) {
+      return toast.warn(`Số lượng không được vượt quá tồn kho (${stock})`);
+    }
+
     if (newQuantity < 1) return handleRemove(itemId);
 
     try {
@@ -56,21 +53,15 @@ export default function Cart() {
     }
   };
 
-  // --- SỬA 4: Dispatch action 'toggle' ---
   const handleSelectItem = (itemId) => {
     dispatch(toggleSelectItemInCart(itemId));
-    // Bỏ: setSelectedItems((prev) => ...);
   };
 
-  // --- SỬA 5: Dispatch action 'set all' ---
   const handleSelectAll = (e) => {
     const allItemIds = e.target.checked ? cartItems.map((i) => i.id) : [];
     dispatch(setSelectAllInCart(allItemIds));
-    // Bỏ: setSelectedItems(...);
   };
 
-  // Logic này giờ hoàn toàn dựa vào Redux (useMemo)
-  // Không cần thay đổi gì ở đây, nó sẽ tự động chạy đúng
   const { itemsForCheckout, totalPrice } = useMemo(() => {
     const selected = cartItems.filter((item) =>
       selectedItems.includes(item.id)
@@ -84,7 +75,6 @@ export default function Cart() {
   }, [cartItems, selectedItems]);
 
   const handleOrder = () => {
-    // ... (logic hàm này không thay đổi)
     if (itemsForCheckout.length === 0)
       return toast.warn("Bạn chưa chọn sản phẩm nào để đặt hàng.");
     dispatch(setSelectedForOrder(itemsForCheckout));
@@ -131,6 +121,7 @@ export default function Cart() {
               const color = variant?.productColor?.color;
               const image = variant?.productColor?.imageUrls?.[0] || "";
               const price = Number(variant?.price || 0);
+              const stock = variant?.stock || 0;
 
               return (
                 <div

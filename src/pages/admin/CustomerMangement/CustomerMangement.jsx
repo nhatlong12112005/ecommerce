@@ -14,8 +14,8 @@ import {
   Typography,
   Paper,
   Chip,
-  Tabs, // Thêm Tabs
-  Tab, // Thêm Tab
+  Tabs,
+  Tab,
   IconButton,
   InputAdornment,
 } from "@mui/material";
@@ -23,11 +23,10 @@ import SearchIcon from "@mui/icons-material/Search";
 import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import DeleteIcon from "@mui/icons-material/Delete";
-import RestoreIcon from "@mui/icons-material/Restore"; // Icon khôi phục
+import RestoreIcon from "@mui/icons-material/Restore";
 import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 
 import CustomerDetailDialog from "./CustomerDetailDialog";
-// Import service trực tiếp
 import {
   fetchDataCustomer,
   getTrashCustomers,
@@ -41,43 +40,33 @@ import useDebounce from "../../../hooks/useDebounce";
 const LIMIT_RECORD_PER_PAGE = 10;
 
 export default function CustomerManagement() {
-  // --- State Dữ liệu ---
+  // ... (Giữ nguyên toàn bộ phần State và Hàm xử lý logic ở trên)
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
-  // --- State Bộ lọc & Tab ---
-  const [currentTab, setCurrentTab] = useState(0); // 0: List, 1: Trash
+  const [currentTab, setCurrentTab] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(-1); // -1: Tất cả, 1: Active, 0: Inactive
-
-  // --- State Dialog ---
+  const [statusFilter, setStatusFilter] = useState(-1);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-
   const debouncedSearch = useDebounce(search, 500);
 
-  // === HÀM TẢI DỮ LIỆU ===
   const fetchData = async () => {
     setIsLoading(true);
     try {
       if (currentTab === 0) {
-        // --- TAB DANH SÁCH ---
         const params = {
           page,
           limit: LIMIT_RECORD_PER_PAGE,
           search: debouncedSearch,
-          // Nếu statusFilter khác -1 thì gửi lên (0 hoặc 1)
           ...(statusFilter !== -1 && { isActive: statusFilter }),
         };
         const res = await fetchDataCustomer(params);
         setUsers(res.data || []);
         setTotal(res.totalItems || 0);
       } else {
-        // --- TAB THÙNG RÁC ---
         const res = await getTrashCustomers();
-        // Backend trả về mảng, chưa phân trang nên ta giả lập
         setUsers(res || []);
         setTotal(res.length || 0);
       }
@@ -89,28 +78,22 @@ export default function CustomerManagement() {
     }
   };
 
-  // Gọi lại khi thay đổi filter/tab
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedSearch, statusFilter, currentTab]);
 
-  // Reset trang khi đổi Tab
   const handleChangeTab = (e, newVal) => {
     setCurrentTab(newVal);
     setPage(1);
-    setStatusFilter(-1); // Reset bộ lọc trạng thái
+    setStatusFilter(-1);
   };
 
-  // === CÁC HÀNH ĐỘNG ===
-
-  // 1. Xem chi tiết
   const handleViewDetail = (user) => {
     setSelectedUser(user);
     setIsDetailOpen(true);
   };
 
-  // 2. Xóa mềm (Đưa vào thùng rác)
   const handleDelete = async (id) => {
     if (
       !window.confirm(
@@ -129,7 +112,6 @@ export default function CustomerManagement() {
     }
   };
 
-  // 3. Khôi phục (Từ thùng rác)
   const handleRestore = async (id) => {
     try {
       await restoreCustomer(id);
@@ -140,14 +122,11 @@ export default function CustomerManagement() {
     }
   };
 
-  // 4. Khóa / Mở khóa (Cập nhật status)
   const handleToggleStatus = async (user) => {
-    const newStatus = user.isActive === 1 ? 0 : 1; // Đảo ngược trạng thái
+    const newStatus = user.isActive === 1 ? 0 : 1;
     const actionName = newStatus === 1 ? "Mở khóa" : "Khóa";
-
     if (!window.confirm(`Bạn có chắc muốn ${actionName} tài khoản này?`))
       return;
-
     try {
       await updateCustomerStatus(user.id, newStatus);
       toast.success(`Đã ${actionName} tài khoản thành công!`);
@@ -163,14 +142,12 @@ export default function CustomerManagement() {
         Quản lý khách hàng
       </Typography>
 
-      {/* --- THANH CÔNG CỤ --- */}
       <div className="flex flex-col gap-4 mb-4">
         <Tabs value={currentTab} onChange={handleChangeTab}>
           <Tab label="Danh sách tài khoản" />
           <Tab label="Thùng rác (Đã xóa)" />
         </Tabs>
 
-        {/* Bộ lọc chỉ hiện ở Tab Danh sách */}
         {currentTab === 0 && (
           <div className="flex gap-3 items-center bg-white p-2 rounded shadow-sm">
             <TextField
@@ -206,7 +183,6 @@ export default function CustomerManagement() {
 
       <Divider sx={{ mb: 2 }} />
 
-      {/* --- BẢNG DỮ LIỆU --- */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -234,7 +210,6 @@ export default function CustomerManagement() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.phone}</TableCell>
 
-                  {/* Cột Trạng thái (Chỉ hiện ở Tab Danh sách) */}
                   {currentTab === 0 && (
                     <TableCell align="center">
                       <Chip
@@ -248,19 +223,20 @@ export default function CustomerManagement() {
 
                   <TableCell align="center">
                     <div className="flex gap-1 justify-center">
-                      {/* Nút Xem chi tiết (Chung cho cả 2 tab) */}
-                      <IconButton
-                        color="info"
-                        onClick={() => handleViewDetail(user)}
-                        title="Xem chi tiết"
-                      >
-                        <RemoveRedEyeIcon />
-                      </IconButton>
+                      {/* ✅ SỬA LẠI Ở ĐÂY: Chỉ hiện nút Xem chi tiết nếu ở Tab Danh sách (0) */}
+                      {currentTab === 0 && (
+                        <IconButton
+                          color="info"
+                          onClick={() => handleViewDetail(user)}
+                          title="Xem chi tiết"
+                        >
+                          <RemoveRedEyeIcon />
+                        </IconButton>
+                      )}
 
                       {currentTab === 0 ? (
                         // === TAB DANH SÁCH ===
                         <>
-                          {/* Nút Khóa/Mở khóa */}
                           <IconButton
                             color={user.isActive === 1 ? "warning" : "success"}
                             onClick={() => handleToggleStatus(user)}
@@ -275,7 +251,6 @@ export default function CustomerManagement() {
                             )}
                           </IconButton>
 
-                          {/* Nút Xóa mềm */}
                           <IconButton
                             color="error"
                             onClick={() => handleDelete(user.id)}
@@ -311,7 +286,6 @@ export default function CustomerManagement() {
         </Table>
       </TableContainer>
 
-      {/* Phân trang (Chỉ hiện ở Tab Danh sách và có dữ liệu) */}
       {users.length > 0 && currentTab === 0 && (
         <div className="flex justify-end p-4">
           <Pagination

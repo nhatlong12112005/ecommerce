@@ -296,7 +296,10 @@ export default function ColorGroupListDialog({ open, onClose, product }) {
                               <TableRow key={v.id}>
                                 <TableCell>{v.storage}</TableCell>
                                 <TableCell>
-                                  {v.price?.toLocaleString("vi-VN")}đ
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    style: "currency",
+                                    currency: "VND",
+                                  }).format(v.price)}
                                 </TableCell>
                                 <TableCell>{v.stock}</TableCell>
                               </TableRow>

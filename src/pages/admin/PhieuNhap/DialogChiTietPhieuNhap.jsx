@@ -104,9 +104,6 @@ const DialogChiTietPhieuNhap = ({ open, onClose, receipt }) => {
             <strong>Ngày nhập:</strong>{" "}
             {new Date(receipt.receiptDate).toLocaleString()}
           </Typography>
-          <Typography variant="body1">
-            <strong>Người tạo:</strong> {receipt.createdBy?.name || "N/A"}
-          </Typography>
         </Stack>
 
         <Typography variant="h6" mt={3} mb={1}>
@@ -174,7 +171,10 @@ const DialogChiTietPhieuNhap = ({ open, onClose, receipt }) => {
                       </TableCell>
                       <TableCell align="center">{item.quantity}</TableCell>
                       <TableCell align="center">
-                        {item.importPrice.toLocaleString()} đ
+                        {new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        }).format(item.importPrice)}
                       </TableCell>
                       <TableCell align="center" sx={{ fontWeight: "bold" }}>
                         {item.totalItemCost.toLocaleString()} đ
@@ -198,7 +198,10 @@ const DialogChiTietPhieuNhap = ({ open, onClose, receipt }) => {
                       align="center"
                       sx={{ fontWeight: "bold", color: "darkgreen" }}
                     >
-                      {group.totalCost.toLocaleString()} đ
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(group.totalCost)}
                     </TableCell>
                   </TableRow>
 
@@ -224,7 +227,10 @@ const DialogChiTietPhieuNhap = ({ open, onClose, receipt }) => {
         >
           <Typography variant="h6" fontWeight="bold" color="primary">
             Tổng số lượng: {totalQuantity} | Tổng tiền phiếu nhập:{" "}
-            {receipt.totalImportCost.toLocaleString()} đ
+            {new Intl.NumberFormat("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            }).format(receipt.totalImportCost)}
           </Typography>
         </Stack>
       </DialogContent>
